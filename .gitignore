@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+venv/
+.git/
+.idea/
+.env
+*.png
+*.jpg
+
+!app/menu_photos/example.jpg

@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    container_name: vaflya-bot
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: python app/start.py
+    network_mode: "host"
