@@ -69,13 +69,14 @@ async def successful_payment(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username if message.from_user.username else str(user_id)
     month = message.successful_payment.invoice_payload.removeprefix("vpn_")
-    logger.info(f"Пользователь {username} купил подписку на {month} месяц{suffix[month]}")
 
     uuid = ''
 
     if '_' in month:
         uuid = month.split("_")[0]
         month = month.split("_")[1]
+
+    logger.info(f"Пользователь {username} купил {"подписку" if not uuid else "продление подписки"} на {month} месяц{suffix[month]}")
 
     try:
         if not uuid:
