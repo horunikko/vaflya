@@ -4,6 +4,7 @@ import logging
 from config import nalogo_config, pay_config
 from lib.nalogo import Client
 from lib.nalogo import UnauthorizedException
+from socksio.exceptions import ProtocolError
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ async def create_simple_receipt(month: int, user: str):
     if not await client.get_access_token():
         await client.create_new_access_token(inn, password)
 
-    for att in range(3):
+    for att in range(1, 4):
         try:
             result = await client.income().create(
                 name=f"Оплата подписки на {month} месяц{suffix[str(month)]}. ID пользователя: {user}",
@@ -45,6 +46,10 @@ async def create_simple_receipt(month: int, user: str):
         except UnauthorizedException:
             logger.error("Токен недействителен, получаем новый...")
             await client.create_new_access_token(inn, password)
+
+        except ProtocolError as e:
+            logger.warning(f"Прокси упал, попытка достучаться до прокси {att}/3")
+            await asyncio.sleep(2)
         
         except Exception as e:
             logger.exception(f"Ошибка при создании чека. Попробуйте использовать прокси.")
