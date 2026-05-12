@@ -6,5 +6,6 @@ venv/
 .env
 *.png
 *.jpg
+tokens.json
 
 !app/menu_photos/example.jpg
