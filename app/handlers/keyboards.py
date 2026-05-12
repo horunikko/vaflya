@@ -1,15 +1,15 @@
 import os
 import random
 import logging
-from config import config as vaflya_config
+from config import tg_config
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 logger = logging.getLogger(__name__)
 
-admin_list = vaflya_config.tg_admin_ids
-tg_instruction = vaflya_config.tg_instruction
+admin_list = tg_config.admin_ids
+tg_instruction = tg_config.instruction_active
 
 if admin_list:
     admin_list = admin_list.split(",")

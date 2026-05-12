@@ -1,6 +1,6 @@
 import os
 import logging
-from config import config as vaflya_config
+from config import pay_config, tg_config
 from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -10,10 +10,10 @@ from handlers.keyboards import choose_action
 logger = logging.getLogger(__name__)
 router = Router()
 
-one_month = vaflya_config.one_month
-three_month = vaflya_config.three_month
-one_year = vaflya_config.one_year
-tg_proxy = vaflya_config.tg_proxy
+one_month = pay_config.one_month
+three_month = pay_config.three_month
+one_year = pay_config.one_year
+tg_proxy = tg_config.proxy
 
 # главное меню подписок по кнопке Подписки
 @router.callback_query(F.data == 'subs')

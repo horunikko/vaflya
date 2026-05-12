@@ -1,6 +1,6 @@
 import os
 import logging
-from config import config as vaflya_config
+from config import pay_config, nalogo_config
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery, LabeledPrice, PreCheckoutQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from service.nalog import create_simple_receipt
@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-YOOKASSA_TOKEN = vaflya_config.yookassa_token
-NALOGO_ACTIVE = vaflya_config.nalogo_active
-ONE_MONTH = vaflya_config.one_month
-THREE_MONTHS = vaflya_config.three_month
-ONE_YEAR = vaflya_config.one_year
+YOOKASSA_TOKEN = pay_config.yookassa_token
+NALOGO_ACTIVE = nalogo_config.active
+ONE_MONTH = pay_config.one_month
+THREE_MONTHS = pay_config.three_month
+ONE_YEAR = pay_config.one_year
  
 
 # кнопочка для выхода в менюшку после оплаты

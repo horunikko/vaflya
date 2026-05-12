@@ -1,18 +1,18 @@
 import os
 import asyncio
 import logging
-from config import config as vaflya_config
+from config import nalogo_config, pay_config
 from lib.nalogo import Client
 from lib.nalogo import UnauthorizedException
 
 logger = logging.getLogger(__name__)
 
-inn = vaflya_config.nalogo_inn
-password = vaflya_config.nalogo_password
-proxy = vaflya_config.nalogo_proxy
-ONE_MONTH = vaflya_config.one_month
-THREE_MONTHS = vaflya_config.three_month
-ONE_YEAR = vaflya_config.one_year
+inn = nalogo_config.inn
+password = nalogo_config.password
+proxy = nalogo_config.proxy
+ONE_MONTH = pay_config.one_month
+THREE_MONTHS = pay_config.three_month
+ONE_YEAR = pay_config.one_year
 
 
 price_list = {"1": ONE_MONTH, "3": THREE_MONTHS, "12": ONE_YEAR}

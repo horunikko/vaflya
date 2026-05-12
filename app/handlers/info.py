@@ -1,6 +1,6 @@
 import os
 import logging
-from config import config as vaflya_config
+from config import tg_config
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -44,16 +44,19 @@ def to_tg_link(value: str) -> str:
         return value
     return f'https://t.me/{value.removeprefix("@")}'
 
-support_link = to_tg_link(vaflya_config.tg_support_link)
-channel_link = to_tg_link(vaflya_config.tg_channel_link)
-tg_info = vaflya_config.tg_info
-tg_instruction = vaflya_config.tg_instruction
+
+support_link = to_tg_link(tg_config.support_link)
+channel_link = to_tg_link(tg_config.channel_link)
+tg_info = tg_config.info_active
+tg_instruction = tg_config.instruction_active
+
 
 info_buttons = []
 if tg_instruction:
     info_buttons.append(InlineKeyboardButton(text='Инструкция', callback_data='manual', style='primary', icon_custom_emoji_id='5258328383183396223'))
 if tg_info:
     info_buttons.append(InlineKeyboardButton(text='О тарифе', callback_data='info', style='primary', icon_custom_emoji_id='5258503720928288433'))
+
 
 info_menu_buttons = [info_buttons] + [
     [

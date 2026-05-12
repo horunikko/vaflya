@@ -1,6 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher
-from config import config as vaflya_config
+from config import tg_config
 from handlers.menu import push
 import logging
 
@@ -13,7 +13,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-bot = Bot(token=vaflya_config.tg_token)
+bot = Bot(token=tg_config.token)
 dp = Dispatcher()
 
 

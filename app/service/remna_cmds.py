@@ -1,6 +1,6 @@
 import os
 import logging
-from config import config as vaflya_config
+from config import remna_config
 from remnawave import RemnawaveSDK
 from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto
 from remnawave.exceptions.general import NotFoundError
@@ -8,9 +8,9 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
-token = vaflya_config.remna_token
-panel_url = vaflya_config.remna_panel_url
-domain = vaflya_config.remna_sub_domain
+token = remna_config.token
+panel_url = remna_config.panel_url
+domain = remna_config.sub_domain
 hwid_limit = None
 
 sdk = RemnawaveSDK(
