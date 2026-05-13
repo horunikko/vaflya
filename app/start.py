@@ -1,8 +1,7 @@
 import asyncio
-from aiogram import Bot, Dispatcher
-from config import tg_config
-from handlers.menu import push
 import logging
+from aiogram import Bot, Dispatcher
+from aiohttp import web
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,24 +12,45 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
+from handlers.menu import push
+from database.db import init_db
+from payment.webhook import yookassa_webhook
+from config import tg_config
+
+
 bot = Bot(token=tg_config.token)
 dp = Dispatcher()
 
 
-# роутеры
-from handlers import menu, info, pay, sub, admin
-for router in (menu.router, info.router, pay.router, sub.router, admin.router):
+from handlers import menu, info, sub, admin
+for router in (menu.router, info.router, sub.router, admin.router):
     dp.include_router(router)
 
 
+
+async def start_webhook(bot):
+    app = web.Application()
+    app["bot"] = bot
+
+    app.router.add_post("/yookassa/webhook", yookassa_webhook)
+    runner = web.AppRunner(app)
+
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 8080)
+    await site.start()
+
+
 async def main():
-    logger.info('Запуск бота...')
-    
-    bot_info = await bot.get_me()
-    dp["bot_info"] = bot_info
+    dp["bot_info"] = await bot.get_me()
+    await init_db()
 
     asyncio.create_task(push(bot))
+    await start_webhook(bot)
+
+    logger.info('Включение бота')
+
     await dp.start_polling(bot)
+
 
 if __name__ == '__main__':
     try:
