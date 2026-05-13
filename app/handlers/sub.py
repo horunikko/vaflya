@@ -1,18 +1,20 @@
-import os
 import logging
-from config import pay_config, tg_config
 from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+
 from service.remna_cmds import user_stats, user_name, remna_create_user, delete_devices, has_user_sub
 from handlers.keyboards import choose_action
+from payment.yookassa import create_payment
+from config import payment_config, tg_config
 
 logger = logging.getLogger(__name__)
 router = Router()
 
-one_month = pay_config.one_month
-three_month = pay_config.three_month
-one_year = pay_config.one_year
+one_month = payment_config.one_month
+three_month = payment_config.three_month
+one_year = payment_config.one_year
+return_url = payment_config.return_url
 tg_proxy = tg_config.proxy
 
 # главное меню подписок по кнопке Подписки
@@ -206,8 +208,6 @@ async def renewal_month(callback: CallbackQuery):
 # предварительное соглашение с пользователем перед оплатой
 @router.callback_query(F.data.startswith('agreement_'))
 async def buy_month(callback: CallbackQuery):
-    await callback.answer()
-
     full = callback.data.removeprefix('agreement_')
     suffix = {"1": "", "3": "а", "12": "ев"}
 
@@ -222,11 +222,12 @@ async def buy_month(callback: CallbackQuery):
 
     # кнопка оплаты подписки
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Оплатить', callback_data=f'upay_{full}', 
+        [InlineKeyboardButton(text='Перейти к оплате', callback_data=f'upay_{full}', 
                               style='success', icon_custom_emoji_id='5258204546391351475')],
         [InlineKeyboardButton(text='Назад', callback_data=f'month_{uuid}', icon_custom_emoji_id='5258236805890710909')]
     ])
 
+    await callback.answer()
     await callback.message.edit_caption(caption='<b>— — Оплата — —</b>\n\n\n'
                                                 f'Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
                                                 f'{caption[1]}\n\n\n'
@@ -234,6 +235,38 @@ async def buy_month(callback: CallbackQuery):
                                                 reply_markup=kb,
                                                 parse_mode='HTML')
 
+
+# создание платежа
+@router.callback_query(F.data.startswith('upay_'))
+async def upay(callback: CallbackQuery, bot_info):
+    month = callback.data.removeprefix('upay_')
+    user_id = callback.from_user.id
+    username = callback.from_user.username if callback.from_user.username else str(user_id)
+    uuid = ''
+
+    if '_' in month:
+        uuid = month.split("_")[0]
+        month = month.split("_")[1]
+
+    suffix = {"1": "", "3": "а", "12": "ев"}
+
+    global return_url
+
+    if not return_url:
+        return_url = f"tg://resolve?domain={bot_info.username}"
+
+    payment = await create_payment(
+        user_id=user_id,
+        username=username,
+        month=month,
+        return_url=return_url,
+        uuid=uuid
+    )
+    text = f"Для оплаты {'продления ' if uuid else ''}подписки на {month} месяц{suffix[month]} нажмите кнопку 'Оплатить'"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Оплатить", url=payment)]])
+    await callback.answer()
+    await callback.message.edit_caption(caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", reply_markup=kb, parse_mode='HTML')
 
 
 # кнопка Пробный период. Спрашивается, уверен ли пользователь
