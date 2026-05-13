@@ -1,9 +1,9 @@
-import os
 import logging
-from config import tg_config
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+from config import tg_config
 
 logger = logging.getLogger(__name__)
 router = Router()

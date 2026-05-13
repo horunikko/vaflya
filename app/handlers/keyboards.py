@@ -1,9 +1,8 @@
-import os
-import random
 import logging
-from config import tg_config
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from config import tg_config
 
 
 logger = logging.getLogger(__name__)
