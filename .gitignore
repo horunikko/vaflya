@@ -7,5 +7,6 @@ venv/
 *.png
 *.jpg
 tokens.json
+*.db
 
 !app/menu_photos/example.jpg
