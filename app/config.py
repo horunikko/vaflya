@@ -59,7 +59,6 @@ class RemnaConfig():
 class PaymentConfig():
     """Конфиг платёжки и цен"""
     # юкасса
-    yookassa_token: str
     shop_id: str
     secret_key: str
 
@@ -100,7 +99,6 @@ remna_config = RemnaConfig(
 
 
 payment_config = PaymentConfig(
-    yookassa_token=require_value("YOOKASSA_TOKEN"),
     shop_id=require_value("YOOKASSA_SHOP_ID"),
     secret_key=require_value("YOOKASSA_SECRET_KEY"),
 
