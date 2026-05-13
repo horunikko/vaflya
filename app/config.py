@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def require_value(name: str) -> str:
-    value = os.getenv(name)
+    value = os.getenv(name).strip()
 
     if not value:
         raise RuntimeError(f"Обязательный параметр {name} не указан. Укажите его в файле .env")
@@ -17,7 +17,7 @@ def require_value(name: str) -> str:
 
 
 def prefer_value(name: str) -> str:
-    value = os.getenv(name)
+    value = os.getenv(name).strip()
 
     if not value:
         logger.info(f"Необязательный параметр {name} не указан")
