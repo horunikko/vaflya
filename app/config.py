@@ -1,7 +1,7 @@
-from dataclasses import dataclass
 import os
 import logging
 from dotenv import load_dotenv
+from dataclasses import dataclass
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -56,20 +56,25 @@ class RemnaConfig():
 
 
 @dataclass(frozen=True)
-class PayConfig():
+class PaymentConfig():
     """Конфиг платёжки и цен"""
     # юкасса
     yookassa_token: str
+    shop_id: str
+    secret_key: str
 
     # цены
     one_month: int
     three_month: int
     one_year: int
 
+    # необязательный параметр
+    return_url: str | None
+
 
 @dataclass(frozen=True)
 class NalogoConfig():
-    # nalogo
+    """Конфиг налоговой"""
     active: bool | None = None
     inn: str | None = None
     password: str | None = None
@@ -94,12 +99,16 @@ remna_config = RemnaConfig(
 )
 
 
-pay_config = PayConfig(
+payment_config = PaymentConfig(
     yookassa_token=require_value("YOOKASSA_TOKEN"),
+    shop_id=require_value("YOOKASSA_SHOP_ID"),
+    secret_key=require_value("YOOKASSA_SECRET_KEY"),
 
     one_month=int(require_value("ONE_MONTH")),
     three_month=int(require_value("THREE_MONTHS")),
     one_year=int(require_value("ONE_YEAR")),
+
+    return_url=prefer_value("YOOKASSA_RETURN_URL")
 )
 
 
