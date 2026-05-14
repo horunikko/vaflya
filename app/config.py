@@ -20,7 +20,10 @@ def prefer_value(name: str) -> str:
     value = os.getenv(name).strip()
 
     if not value:
-        logger.info(f"Необязательный параметр {name} не указан")
+        if name == 'YOOKASSA_RETURN_URL':
+            logger.info(f"{name} не указан, используем дефолтный")
+        else:
+            logger.info(f"Необязательный параметр {name} не указан, не используем его")
 
     return value
 
@@ -41,8 +44,6 @@ class TgConfig():
     support_link: str
     channel_link: str
 
-    info_active: bool | None = None
-    instruction_active: bool | None = None
     admin_ids: str | None = None
     proxy: str | None = None
 
@@ -84,8 +85,6 @@ tg_config = TgConfig(
     token=require_value("TG_TOKEN"),
     support_link=require_value("TG_SUPPORT_LINK"),
     channel_link=require_value("TG_CHANNEL_LINK"),
-    info_active=bool(prefer_value("TG_INFO")),
-    instruction_active=bool(prefer_value("TG_INSTRUCTION")),
     admin_ids=prefer_value("TG_ADMIN_IDS"),
     proxy=prefer_value("TG_PROXY"),
 )
