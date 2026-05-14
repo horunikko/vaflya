@@ -56,13 +56,3 @@ async def cb_menu(callback: CallbackQuery, bot_info):
     await callback.message.edit_caption(caption=caption(bot_info),
                                         parse_mode='HTML',
                                         reply_markup=inline_start(callback.from_user.id))
-
-
-# вызов менюшки после оплаты
-@router.callback_query(F.data == 'pay_menu')
-async def payMenu(callback: CallbackQuery, bot_info):
-    await callback.answer()
-    await callback.message.delete()
-    await callback.message.answer_photo(photo=FSInputFile(get_random_photo()),
-                                        caption=caption(bot_info),
-                                        parse_mode='HTML', reply_markup=inline_start(callback.from_user.id))
