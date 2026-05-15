@@ -8,7 +8,7 @@ from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButto
 from config import nalogo_config
 from service.nalog import create_simple_receipt
 from service.remna_cmds import remna_create_user, update_user
-from database.payments import is_payment_processed, update_payment_status, mark_payment_processed
+from database.payments import is_payment_processed, mark_payment_processed
 
 
 logger = logging.getLogger(__name__)
@@ -44,9 +44,6 @@ async def yookassa_webhook(request: web.Request):
 
         payment = data.get("object", {})
         payment_id = payment.get("id")
-        status = payment.get("status")
-
-        await update_payment_status(payment_id, status)
 
         if event != "payment.succeeded":
             return web.Response(text="ignored")

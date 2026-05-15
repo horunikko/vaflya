@@ -23,7 +23,6 @@ async def init_db() -> None:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             payment_id TEXT PRIMARY KEY,
-            status TEXT NOT NULL,
             processed INTEGER DEFAULT 0
         )
         """)

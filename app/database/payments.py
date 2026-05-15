@@ -7,9 +7,9 @@ async def create_payment_record(payment_id: str) -> None:
     db = await get_db()
 
     await db.execute("""
-        INSERT OR IGNORE INTO payments (payment_id, status)
-        VALUES (?, ?)
-    """, (payment_id, "pending"))
+        INSERT OR IGNORE INTO payments (payment_id)
+        VALUES (?)
+    """, (payment_id))
 
     await db.commit()
     await db.close()
@@ -39,19 +39,6 @@ async def mark_payment_processed(payment_id: str) -> None:
         SET processed = 1
         WHERE payment_id = ?
     """, (payment_id,))
-
-    await db.commit()
-    await db.close()
-
-
-async def update_payment_status(payment_id: str, status: str) -> None:
-    """Обновляет статус платежа. Ни ебу зачем, удалю потом если не нужно будет"""
-    db = await get_db()
-    await db.execute("""
-        UPDATE payments
-        SET status = ?
-        WHERE payment_id = ?
-    """, (status, payment_id))
 
     await db.commit()
     await db.close()
