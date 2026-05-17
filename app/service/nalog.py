@@ -50,12 +50,11 @@ async def create_simple_receipt(month: int, user: str):
             logger.error("Токен недействителен, получаем новый...")
             await client.create_new_access_token(inn, password)
 
-        except (httpx.ProtocolError, httpx.ReadTimeout):
-            logger.warning(f"Прокси упал, попытка достучаться до прокси {att}/3")
-            await asyncio.sleep(2)
+        except httpx.ProxyError:
+            logger.error("Неправильный username или пароль у прокси")
         
         except Exception as e:
-            logger.exception(f"Ошибка при создании чека. Попробуйте использовать прокси.")
+            logger.exception(f"Прокси упал, попытка достучаться до прокси {att}/3")
             await asyncio.sleep(2)
 
     return None
