@@ -49,20 +49,44 @@ channel_link = to_tg_link(tg_config.channel_link)
 info_buttons = []
 
 if any(instruction.values()):
-    info_buttons.append(InlineKeyboardButton(text='Инструкция', callback_data='manual', style='primary', icon_custom_emoji_id='5258328383183396223'))
+    info_buttons.append(InlineKeyboardButton(
+        text='Инструкция',
+        callback_data='manual',
+        style='primary', 
+        icon_custom_emoji_id='5258328383183396223'))
 else:
     logger.info("Кнопка 'Инструкция' отключена")
 
+
 if info_text:
-    info_buttons.append(InlineKeyboardButton(text='О тарифе', callback_data='info', style='primary', icon_custom_emoji_id='5258503720928288433'))
+    info_buttons.append(InlineKeyboardButton(
+        text='О тарифе', 
+        callback_data='info', 
+        style='primary', 
+        icon_custom_emoji_id='5258503720928288433'))
 else:
     logger.info("Кнопка 'О тарифе' отключена")
 
 
 info_menu_buttons = [info_buttons] + [
-    [InlineKeyboardButton(text='Поддержка', url=support_link, icon_custom_emoji_id='5316727448644103237', style='success'), 
-     InlineKeyboardButton(text='ТГ канал', url=channel_link, icon_custom_emoji_id='5260268501515377807', style='danger')],
-    [InlineKeyboardButton(text='В меню', callback_data='menu', icon_custom_emoji_id='5257963315258204021')]
+    [
+        InlineKeyboardButton(
+            text='Поддержка', 
+            url=support_link, 
+            icon_custom_emoji_id='5316727448644103237', 
+            style='success'), 
+        InlineKeyboardButton(
+            text='ТГ канал', 
+            url=channel_link, 
+            icon_custom_emoji_id='5260268501515377807', 
+            style='danger')
+    ],
+    [
+        InlineKeyboardButton(
+            text='В меню', 
+            callback_data='menu', 
+            icon_custom_emoji_id='5257963315258204021')
+    ]
 ]
 
 
@@ -80,9 +104,25 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     for device, value in instruction.items():
         if value:
             device_text, cb, emoji = labels[device]
-            buttons.append([InlineKeyboardButton(text=device_text, callback_data=cb, icon_custom_emoji_id=emoji)])
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text=device_text, 
+                        callback_data=cb, 
+                        icon_custom_emoji_id=emoji
+                    )
+                ]
+            )
     
-    buttons.append([InlineKeyboardButton(text='Назад', callback_data='info_menu', icon_custom_emoji_id='5258236805890710909')])
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text='Назад', 
+                callback_data='info_menu', 
+                icon_custom_emoji_id='5258236805890710909'
+            )
+        ]
+    )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -95,42 +135,70 @@ manual_kb = create_manual_kb(instruction)
 @router.callback_query(F.data == 'info_menu')
 async def info_menu(callback: CallbackQuery):
     await callback.answer()
-    await callback.message.edit_caption(caption='<b>— — Информация — —</b>\n\n\n'
-                                                '<i>Выберите действие кнопками ниже</i>',
-                                                parse_mode='HTML',
-                                                reply_markup=info_menu_kb)
+    await callback.message.edit_caption(
+        caption='<b>— — Информация — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
+        parse_mode='HTML',
+        reply_markup=info_menu_kb
+    )
 
 
 # кнопка Инструкция
 @router.callback_query(F.data == 'manual')
 async def manual(callback: CallbackQuery):
     await callback.answer()
-    await callback.message.edit_caption(caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
-                                        parse_mode='HTML', reply_markup=manual_kb)
+    await callback.message.edit_caption(
+        caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
+        parse_mode='HTML', 
+        reply_markup=manual_kb
+    )
 
 
 # сама по себе инструкция
 @router.callback_query(F.data.startswith('manual_'))
 async def manual_android(callback: CallbackQuery):
     device = callback.data.removeprefix('manual_')
+
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Мои подписки', callback_data='get_subs', icon_custom_emoji_id='5226513232549664618', style='success')],
-        [InlineKeyboardButton(text='Назад', callback_data='manual', icon_custom_emoji_id='5258236805890710909')]
+        [
+            InlineKeyboardButton(
+                text='Мои подписки', 
+                callback_data='get_subs', 
+                icon_custom_emoji_id='5226513232549664618', 
+                style='success'
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text='Назад', 
+                callback_data='manual', 
+                icon_custom_emoji_id='5258236805890710909'
+            )
+        ]
     ])
 
     await callback.answer()
-    await callback.message.edit_caption(caption=f'<b>— — Инструкция — —</b>\n\n{instruction[device]}',
-                                        parse_mode='HTML',
-                                        reply_markup=kb)
+    await callback.message.edit_caption(
+        caption=f'<b>— — Инструкция — —</b>\n\n{instruction[device]}',
+        parse_mode='HTML',
+        reply_markup=kb
+    )
 
 
 # кнопка О тарифе
 @router.callback_query(F.data == 'info')
 async def info(callback: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Назад', callback_data='info_menu', icon_custom_emoji_id='5258236805890710909')]
+        [
+            InlineKeyboardButton(
+                text='Назад', 
+                callback_data='info_menu', 
+                icon_custom_emoji_id='5258236805890710909'
+            )
+        ]
     ])
     await callback.answer()
-    await callback.message.edit_caption(caption=f'<b>— — О тарифе — —</b>\n\n\n{info_text}',
-                                                parse_mode='HTML',
-                                                reply_markup=kb)
+    await callback.message.edit_caption(
+        caption=f'<b>— — О тарифе — —</b>\n\n\n{info_text}',
+        parse_mode='HTML',
+        reply_markup=kb
+    )
