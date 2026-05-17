@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 from handlers.menu import push
-from database.db import init_db
+from database.db import database
 from payment.webhook import yookassa_webhook
 from config import tg_config
 
@@ -42,7 +42,7 @@ async def start_webhook(bot):
 
 async def main():
     dp["bot_info"] = await bot.get_me()
-    await init_db()
+    await database.init_db()
 
     asyncio.create_task(push(bot))
     await start_webhook(bot)

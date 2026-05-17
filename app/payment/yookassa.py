@@ -3,7 +3,7 @@ import logging
 import aiohttp
 from uuid import uuid4
 
-from database.payments import create_payment_record
+from database.db import database
 from config import payment_config
 
 
@@ -81,7 +81,7 @@ async def create_payment(user_id: int, username: str, month: str, return_url: st
                 else:
                     raise TimeoutError("Таймаут. Скорее всего, проблема в вашем сервере💀")
 
-    logger.info(f"Создан платёж {response_data['id']} пользователем {username}")
-    await create_payment_record(response_data['id'])
+    logger.info(f"Сформирован платёж {response_data['id']} пользователем {username}")
+    await database.create_payment_record(response_data['id'])
 
     return response_data["confirmation"]["confirmation_url"]
