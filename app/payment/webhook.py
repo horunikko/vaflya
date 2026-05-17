@@ -7,8 +7,8 @@ from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButto
 
 from config import nalogo_config
 from service.nalog import create_simple_receipt
-from service.remna_cmds import remna_create_user, update_user
-from database.payments import is_payment_processed, mark_payment_processed
+from service.remna_cmds import remna
+from database.db import database
 
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,21 @@ suffix = {
 }
 
 kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='Инструкция', callback_data='manual', style='primary', icon_custom_emoji_id='5258328383183396223')],
-    [InlineKeyboardButton(text='В меню', callback_data='menu', icon_custom_emoji_id='5257963315258204021')]
+    [
+        InlineKeyboardButton(
+            text='Инструкция', 
+            callback_data='manual', 
+            style='primary', 
+            icon_custom_emoji_id='5258328383183396223'
+        )
+    ],
+    [
+        InlineKeyboardButton(
+            text='В меню', 
+            callback_data='menu', 
+            icon_custom_emoji_id='5257963315258204021'
+        )
+    ]
 ])
 
 
@@ -48,7 +61,7 @@ async def yookassa_webhook(request: web.Request):
         if event != "payment.succeeded":
             return web.Response(text="ignored")
 
-        if await is_payment_processed(payment_id):
+        if await database.is_payment_processed(payment_id):
             return web.Response(text="ignored")
 
         metadata = payment.get("metadata", {})
@@ -61,12 +74,12 @@ async def yookassa_webhook(request: web.Request):
         logger.info(f"Успешный платёж {payment_id} от пользователя {username}")
 
         if not uuid:
-            sub = await remna_create_user(username, str(user_id), int(month))
+            sub = await remna.create_user(username, str(user_id), int(month))
             text = (f"Ваша подписка на {month} месяц{suffix[month]}:\n\n{sub}")
             logger.info("Подписка удачно создана")
 
         else:
-            sub_name = await update_user(uuid, int(month))
+            sub_name = await remna.update_user(uuid, int(month))
             text = (f"Подписка {sub_name} продлена на {month} месяц{suffix[month]}!")
             logger.info(text)
 
@@ -76,7 +89,7 @@ async def yookassa_webhook(request: web.Request):
                              reply_markup=kb,
                              parse_mode="HTML")
 
-        await mark_payment_processed(payment_id)
+        await database.mark_payment_processed(payment_id)
 
         if NALOGO_ACTIVE:
             await create_simple_receipt(month=month, user=str(user_id))
