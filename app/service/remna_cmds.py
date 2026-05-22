@@ -5,6 +5,7 @@ from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteU
 from remnawave.exceptions.general import NotFoundError
 
 from config import remna_config
+from database.db import database
 
 
 logger = logging.getLogger(__name__)
@@ -16,15 +17,16 @@ class Remnawave:
         self.panel_url = panel_url
         self.domain = domain
         self.hwid_limit = hwid_limit
+
         self.sdk = RemnawaveSDK(base_url=self.panel_url, token=self.token)
 
 
-    # возвращает список telegram id пользователей, подписка которых истекает через день
-    # вызывается функция из файла start.py раз в час
-    async def expire_day(self, days=1) -> list[str]:
+    async def expire_day(self, days: int) -> list[str]:
+        """Возвращает список из telegram id пользователей, чья подписка истекает через {days} дней"""
         start = 0
         users = []
-        delta = datetime.now(timezone.utc) + timedelta(days=days)
+        date = datetime.now(timezone.utc)
+        delta = date + timedelta(days=days)
         
         while True:
             response = await self.sdk.users.get_all_users(size=25, start=start)
@@ -32,10 +34,18 @@ class Remnawave:
                 break
             
             for user in response.users:
-                if delta >= user.expire_at and not user.description:
-                    users.append(user.telegram_id)
-                    await self.sdk.users.update_user(
-                        UpdateUserRequestDto(uuid=user.uuid, description="Уведомлён"))
+                if user.expire_at > date:
+
+                    sub_days = await database.notifications.get_days(str(user.uuid))
+
+                    # создание записи в бд при её отсутствии
+                    if sub_days is None:
+                        await database.notifications.create_or_update(str(user.uuid))
+                        
+                    # а вот тут уже идёт основная проверка
+                    if delta >= user.expire_at and (days < sub_days or sub_days == 0):
+                        users.append(user.telegram_id)
+                        await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=days)
             start += 25
         
         return users
@@ -46,6 +56,7 @@ class Remnawave:
         # проверка глобального hwid лимита
         if self.hwid_limit is None:
             global_limit = await self.sdk.subscriptions_settings.get_settings()
+
             if global_limit.hwid_settings.enabled:
                 self.hwid_limit = global_limit.hwid_settings.fallback_device_limit
             else:
@@ -96,9 +107,8 @@ class Remnawave:
 
     async def has_user_sub(self, tg_id: str) -> bool:
         """Возвращает истину при наличии у пользователя подписки"""
-        return bool(await self.sdk.users.get_users_by_telegram_id(tg_id))
+        return bool(await self.sdk.users.get_users_by_telegram_id(str(tg_id)))
         
-
 
     async def user_name(self, tg_id: str) -> dict[str, str]:
         """Возвращает словарь с парами значений всех подписок username : uuid по tg_id"""
@@ -117,9 +127,9 @@ class Remnawave:
         await self.sdk.hwid.delete_all_hwid_user(body=request)
 
 
-    async def create_user(self, username: str, tg_id: str, month: int) -> str:
+    async def create_user(self, username: str, tg_id: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
         """Создаёт подписку и возвращает её url"""
-        end_date = datetime.now(timezone.utc) + timedelta(days=30*month)
+        end_date = datetime.now(timezone.utc) + timedelta(days=30*month) + timedelta(days=days)
         squad_uuid = 'ba78e6e0-a2db-49d4-9c0d-2320d9a8aad4'
         res_user = username
         i = 1
@@ -137,6 +147,8 @@ class Remnawave:
         if month < 1:
             description = "Пробная подписка"
 
+        traffic = traffic * 1024 * 1024 * 1024 if traffic is not None else None
+
         new_user = await self.sdk.users.create_user(
             CreateUserRequestDto(
                 username=res_user,
@@ -144,28 +156,37 @@ class Remnawave:
                 expire_at=end_date,
                 description=description,
                 active_internal_squads=[str(squad_uuid)],
-                traffic_limit_strategy="MONTH"
+                traffic_limit_strategy="MONTH",
+                traffic_limit_bytes=traffic,
+                hwid_device_limit=device_limit
             )
         )
 
         return f'<code>{self.domain}{new_user.short_uuid}</code>'
 
-    async def update_user(self, uuid: str, month: int) -> str:
+
+    async def update_user(self, uuid: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
         """Обновляет подписку по её {uuid} на {month} месяцев и возвращает её название"""
         user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
 
+        traffic = traffic * 1024 * 1024 * 1024 if traffic is not None else None
+
+        global_limit = await self.sdk.subscriptions_settings.get_settings()
+        device_limit = device_limit if device_limit == 0 else global_limit.hwid_settings.fallback_device_limit
+
         # проверяем, истекла ли подписка
         if user.expire_at < datetime.now(timezone.utc):
-            new_expire = datetime.now(timezone.utc) + timedelta(days=30*month)
+            new_expire = datetime.now(timezone.utc) + timedelta(days=30*month) + timedelta(days=days)
         else:
-            new_expire = user.expire_at + timedelta(days=30*month)
+            new_expire = user.expire_at + timedelta(days=30*month) + timedelta(days=days)
 
         await self.sdk.users.update_user(
             UpdateUserRequestDto(
                 uuid=uuid,
                 expire_at=new_expire,
-                description='',
-                traffic_limit_strategy="MONTH"
+                traffic_limit_strategy="MONTH",
+                traffic_limit_bytes=traffic,
+                hwid_device_limit=device_limit
             )
         )
         return user.username
