@@ -25,12 +25,17 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
         icon_custom_emoji_id="5226513232549664618"
     )
     builder.button(
+        text='Реферальная система',
+        callback_data='ref_system',
+        style='primary',
+        icon_custom_emoji_id='5258165702707125574'
+    )
+    builder.button(
         text='Информация', 
         callback_data='info_menu', 
-        style='primary', 
+        style='danger', 
         icon_custom_emoji_id='5258503720928288433'
     )
-
     if str(user_id) in admin_list:
         builder.button(
             text='Админ панель', 
@@ -91,3 +96,23 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
     )
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def day_word(days: int, iskl: bool | None = None) -> str:
+    """Возвращает правильное склонение слова 'день'"""
+
+    days = abs(days) % 100
+    last = days % 10
+
+    if 11 <= days <= 14:
+        return "дней"
+
+    if last == 1:
+        if iskl:
+            return "дня"
+        return "день"
+
+    if 2 <= last <= 4:
+        return "дня"
+
+    return "дней"
