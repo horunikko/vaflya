@@ -82,6 +82,6 @@ async def create_payment(user_id: int, username: str, month: str, return_url: st
                     raise TimeoutError("Таймаут. Скорее всего, проблема в вашем сервере💀")
 
     logger.info(f"Сформирован платёж {response_data['id']} пользователем {username}")
-    await database.create_payment_record(response_data['id'])
+    await database.payment.record_create(response_data['id'])
 
     return response_data["confirmation"]["confirmation_url"]

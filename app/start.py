@@ -22,8 +22,8 @@ bot = Bot(token=tg_config.token)
 dp = Dispatcher()
 
 
-from handlers import menu, info, sub, admin
-for router in (menu.router, info.router, sub.router, admin.router):
+from handlers import menu, info, sub, admin, referral
+for router in (menu.router, info.router, sub.router, admin.router, referral.router):
     dp.include_router(router)
 
 
