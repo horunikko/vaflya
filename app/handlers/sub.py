@@ -4,10 +4,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from service.remna_cmds import remna
-from handlers.keyboards import choose_action
+from handlers.keyboards import choose_action, day_word
 from payment.yookassa import create_payment
-from database.db import database
-from config import payment_config, tg_config
+from config import payment_config, tg_config, sub_config
 
 
 logger = logging.getLogger(__name__)
@@ -18,14 +17,18 @@ one_month = payment_config.one_month
 three_month = payment_config.three_month
 one_year = payment_config.one_year
 return_url = payment_config.return_url
+
 tg_proxy = tg_config.proxy
 
+trial_days = sub_config.trial_days
+trial_traffic = sub_config.trial_traffic
+trial_devices = sub_config.trial_devices
 
 
 # главное меню подписок по кнопке Подписки
 @router.callback_query(F.data == 'subs')
 async def subs_menu(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
     res = await remna.has_user_sub(tg_id=tg_id)
 
@@ -33,7 +36,7 @@ async def subs_menu(callback: CallbackQuery):
     buttons = [
         [
             InlineKeyboardButton(
-                text='Купить подписку', 
+                text='Новая подписка', 
                 callback_data=f"{'is_buy' if res else 'month_'}",
                 style='success', 
                 icon_custom_emoji_id='5258165702707125574'
@@ -85,7 +88,7 @@ async def subs_menu(callback: CallbackQuery):
 # кнопка Прокси (работает только если указан tg_proxy)
 @router.callback_query(F.data == 'proxy')
 async def proxy(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     back_subs = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
@@ -139,7 +142,7 @@ async def get_subs(callback: CallbackQuery):
     subs = await remna.user_name(tg_id)
 
     if not subs_list:
-        await callback.answer('У вас нет подписок!')
+        await callback.answer(text='У вас нет подписок!', cache_time=1)
         return
 
     caption = ''
@@ -156,7 +159,7 @@ async def get_subs(callback: CallbackQuery):
         uuid = str(list(subs.values())[0])
         kb = choose_action(uuid)
     
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Подписки — —</b>\n\n{caption}\n{text}",
         parse_mode='HTML',
@@ -170,7 +173,7 @@ async def sub_control(callback: CallbackQuery):
     uuid = callback.data.removeprefix('sub_action_')
     caption = await remna.user_stats(uuid=uuid)
 
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Управление подпиской — —</b>"
         f"\n\n<blockquote>{caption}\n\nВыберите действие:",
@@ -178,10 +181,11 @@ async def sub_control(callback: CallbackQuery):
         reply_markup=choose_action(uuid, one=False)
     )
 
+
 # кнопка управления устройствами
 @router.callback_query(F.data.startswith("device_"))
 async def device_control(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('device_')
 
     # кнопка Сбросить устройства
@@ -228,12 +232,13 @@ async def delete_device(callback: CallbackQuery):
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — Сброс устройств — —</b>\n\n\n'
         'Устройства успешно сброшены! Можете использовать её на других устройствах!',
         parse_mode='HTML',
-        reply_markup=kb)
+        reply_markup=kb
+    )
 
 
 # кнопка Купить подписку. выполняется если у клиента уже есть подписка
@@ -243,7 +248,7 @@ async def is_buy(callback: CallbackQuery):
     buy_mk = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text='Новая подписка', 
+                text='Купить новую', 
                 callback_data='month_', 
                 style='success', 
                 icon_custom_emoji_id='5258108352008823107'
@@ -265,10 +270,10 @@ async def is_buy(callback: CallbackQuery):
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n'
-        'У вас есть активные подписки. Если вы хотите купить новую, нажмите кнопку "Новая подписка"',
+        'У вас уже есть активные подписки. Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке "Мои подписки"',
         reply_markup=buy_mk,
         parse_mode='HTML')
 
@@ -285,21 +290,24 @@ def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=f'1 месяц ({one_month}₽)', 
                 callback_data=f'{callback}1', 
-                icon_custom_emoji_id='5258165702707125574'
+                icon_custom_emoji_id='5258165702707125574',
+                style='success'
             )
         ],
         [
             InlineKeyboardButton(
                 text=f'3 месяца ({three_month}₽)', 
                 callback_data=f'{callback}3', 
-                icon_custom_emoji_id='5258165702707125574'
+                icon_custom_emoji_id='5258165702707125574',
+                style='success'
             )
         ],
         [
             InlineKeyboardButton(
                 text=f'12 месяцев ({one_year}₽)', 
                 callback_data=f'{callback}12', 
-                icon_custom_emoji_id='5258165702707125574'
+                icon_custom_emoji_id='5258165702707125574',
+                style='success'
             )
         ],
         [
@@ -315,7 +323,7 @@ def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
 # продление или покупка подписки
 @router.callback_query(F.data.startswith("month_"))
 async def renewal_month(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('month_')
     caption = ["Подписка", "Выберите срок подписки:"]
 
@@ -361,7 +369,7 @@ async def buy_month(callback: CallbackQuery):
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Оплата — —</b>\n\n\n'
         f'Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
@@ -383,8 +391,6 @@ async def upay(callback: CallbackQuery, bot_info):
         uuid = month.split("_")[0]
         month = month.split("_")[1]
 
-    suffix = {"1": "", "3": "а", "12": "ев"}
-
     global return_url
 
     if not return_url:
@@ -397,17 +403,19 @@ async def upay(callback: CallbackQuery, bot_info):
         return_url=return_url,
         uuid=uuid
     )
-    text = f"Для оплаты {'продления ' if uuid else ''}подписки на {month} месяц{suffix[month]} нажмите кнопку 'Оплатить'"
+    text = '<tg-emoji emoji-id="5258336354642697821">📃</tg-emoji> Нажмите <b>кнопку ниже</b> для перехода на страницу оплаты'
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
                 text="Оплатить", 
-                url=payment
+                url=payment,
+                icon_custom_emoji_id='5258204546391351475',
+                style="success"
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", 
         reply_markup=kb, 
@@ -425,7 +433,7 @@ async def ays(callback: CallbackQuery):
     text = 'У вас уже есть подписка, пробный период недоступен!'
     
     if not user_has_sub:
-        text = 'Вы уверены, что хотите активировать пробный период? Он действует 3 дня и позволяет оценить качество наших услуг. '\
+        text = f'Вы уверены, что хотите активировать пробный период? Он действует {trial_days} {day_word(trial_days)} и позволяет оценить качество наших услуг. '\
             'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
         buttons.append(
             [
@@ -447,7 +455,7 @@ async def ays(callback: CallbackQuery):
         ]
     )
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Пробный период — —</b>\n\n\n{text}",
         parse_mode='HTML',
@@ -460,9 +468,13 @@ async def ays(callback: CallbackQuery):
 async def test_period(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     username = callback.from_user.username if callback.from_user.username else tg_id
-    sub = await remna.create_user(username, tg_id, 0.10)
-
-    await database.activate_trial(tg_id)
+    sub = await remna.create_user(
+        username=username, 
+        tg_id=tg_id, 
+        days=trial_days, 
+        traffic=trial_traffic,
+        device_limit=trial_devices
+    )
 
     test_sub_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -481,11 +493,11 @@ async def test_period(callback: CallbackQuery):
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Пробный период — —</b>\n\n\n"
-        f"Пробный период на 3 дня активирован! Ваша подписка:\n\n{sub}",
+        f"Пробный период на {trial_days} {day_word(trial_days)} активирован! Ваша подписка:\n\n{sub}",
         parse_mode='HTML',
         reply_markup=test_sub_kb
     )
-    logger.info(f"Пробная подписка на 3 дня успешно выдана пользователю {username}")
+    logger.info(f"Пробная подписка на {trial_days} {day_word(trial_days)} успешно выдана пользователю {username}")
