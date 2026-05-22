@@ -6,4 +6,4 @@
 
 <tg-emoji emoji-id="5258508428212445001">💻</tg-emoji> До 5 устройств в подписке, доступно на всех платформах
 
-<tg-emoji emoji-id="5258057130228849960">🌎</tg-emoji> Локации:  <tg-emoji emoji-id="6320817337033295141">🇩🇪</tg-emoji>  Германия,  <tg-emoji emoji-id="6323216772052813661">🇫🇮</tg-emoji>  Финляндия,  <tg-emoji emoji-id="6323602387101550101">🇵🇱</tg-emoji>  Польша
+<tg-emoji emoji-id="5258057130228849960">🌎</tg-emoji> Локации:  <tg-emoji emoji-id="6320817337033295141">🇩🇪</tg-emoji>  Германия,  <tg-emoji emoji-id="6323216772052813661">🇫🇮</tg-emoji>  Финляндия,  <tg-emoji emoji-id="6323602387101550101">🇵🇱</tg-emoji>  Польша,  <tg-emoji emoji-id="6321085042344854835">🇨🇿</tg-emoji>  Чехия
