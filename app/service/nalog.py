@@ -52,8 +52,12 @@ async def create_simple_receipt(month: int, user: str):
 
         except httpx.ProxyError:
             logger.error("Неправильный username или пароль у прокси")
+
+        except httpx.ReadTimeout:
+            logger.info(f"Удачное формирование чека на сумму {price_list[str(month)]}. ID пользователя: {user}")
+            break
         
-        except Exception as e:
+        except Exception:
             logger.exception(f"Прокси упал, попытка достучаться до прокси {att}/3")
             await asyncio.sleep(2)
 
