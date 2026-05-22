@@ -50,7 +50,7 @@ info_buttons = []
 
 if any(instruction.values()):
     info_buttons.append(InlineKeyboardButton(
-        text='Инструкция',
+        text='Как подключить?',
         callback_data='manual',
         style='primary', 
         icon_custom_emoji_id='5258328383183396223'))
@@ -95,21 +95,22 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     buttons = []
 
     labels = {
-        "android": ("Android", "manual_android", "5174698235989590607"),
-        "ios": ("IOS", "manual_ios", "5175018305542423078"),
-        "windows": ("Windows", "manual_windows", "5174885865930883798"),
-        "linux": ("Linux", "manual_linux", "5307512248418182650")
+        "android": ("Android", "manual_android", "5174698235989590607", 'success'),
+        "ios": ("IOS", "manual_ios", "5175018305542423078", 'primary'),
+        "windows": ("Windows", "manual_windows", "5174885865930883798", 'primary'),
+        "linux": ("Linux", "manual_linux", "5307512248418182650", 'primary')
     }
 
     for device, value in instruction.items():
         if value:
-            device_text, cb, emoji = labels[device]
+            device_text, callback, emoji, style = labels[device]
             buttons.append(
                 [
                     InlineKeyboardButton(
                         text=device_text, 
-                        callback_data=cb, 
-                        icon_custom_emoji_id=emoji
+                        callback_data=callback, 
+                        icon_custom_emoji_id=emoji,
+                        style=style
                     )
                 ]
             )
@@ -134,7 +135,7 @@ manual_kb = create_manual_kb(instruction)
 # кнопка Информация в главном меню
 @router.callback_query(F.data == 'info_menu')
 async def info_menu(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Информация — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
@@ -145,7 +146,7 @@ async def info_menu(callback: CallbackQuery):
 # кнопка Инструкция
 @router.callback_query(F.data == 'manual')
 async def manual(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
         parse_mode='HTML', 
@@ -176,7 +177,7 @@ async def manual_android(callback: CallbackQuery):
         ]
     ])
 
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — Инструкция — —</b>\n\n{instruction[device]}',
         parse_mode='HTML',
@@ -196,7 +197,7 @@ async def info(callback: CallbackQuery):
             )
         ]
     ])
-    await callback.answer()
+    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — О тарифе — —</b>\n\n\n{info_text}',
         parse_mode='HTML',
