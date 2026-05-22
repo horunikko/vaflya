@@ -16,7 +16,7 @@ def require_value(name: str) -> str:
     return value
 
 
-def prefer_value(name: str) -> str:
+def prefer_value(name: str, is_int: bool = False) -> str:
     value = os.getenv(name).strip()
 
     if not value:
@@ -24,8 +24,15 @@ def prefer_value(name: str) -> str:
             logger.info(f"{name} не указан, используем дефолтный")
         else:
             logger.info(f"Необязательный параметр {name} не указан, не используем его")
+        if is_int:
+            return 0
+        return None
 
+    if is_int:
+        return int(value)
+    
     return value
+
 
 nalogo_active = os.getenv("NALOGO_ACTIVE")
 nalogo_inn = os.getenv("NALOGO_INN")
@@ -44,8 +51,9 @@ class TgConfig():
     support_link: str
     channel_link: str
 
-    admin_ids: str | None = None
-    proxy: str | None = None
+    admin_ids: str | None
+    proxy: str | None
+    notify_days: list | None
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,19 @@ class RemnaConfig():
     token: str
     sub_domain: str
     panel_url: str
+
+
+@dataclass(frozen=True)
+class SubConfig():
+    """Конфиг подписок"""
+    base_traffic: int | None
+    base_devices: int | None
+
+    trial_days: int | None
+    trial_traffic: int | None
+    trial_devices: int | None
+
+    ref_bonus_days: int | None
 
 
 @dataclass(frozen=True)
@@ -75,10 +96,10 @@ class PaymentConfig():
 @dataclass(frozen=True)
 class NalogoConfig():
     """Конфиг налоговой"""
-    active: bool | None = None
-    inn: str | None = None
-    password: str | None = None
-    proxy: str | None = None
+    active: bool | None
+    inn: str | None
+    password: str | None
+    proxy: str | None
 
 
 tg_config = TgConfig(
@@ -87,6 +108,7 @@ tg_config = TgConfig(
     channel_link=require_value("TG_CHANNEL_LINK"),
     admin_ids=prefer_value("TG_ADMIN_IDS"),
     proxy=prefer_value("TG_PROXY"),
+    notify_days=prefer_value("TG_NOTIFY_DAYS")
 )
 
 
@@ -94,6 +116,21 @@ remna_config = RemnaConfig(
     token=require_value("REMNA_TOKEN"),
     sub_domain=require_value("REMNA_SUB_DOMAIN"),
     panel_url=require_value("REMNA_PANEL_URL"),
+)
+
+
+base_traffic = prefer_value("SUB_BASE_TRAFFIC", is_int=True)
+base_devices = prefer_value("SUB_BASE_DEVICES", is_int=True)
+
+
+sub_config = SubConfig(
+    base_traffic=base_traffic,
+    base_devices=base_devices or None,
+
+    trial_days=prefer_value("SUB_TRIAL_DAYS", is_int=True) or 5,
+    trial_traffic=prefer_value("SUB_TRIAL_TRAFFIC", is_int=True) or base_traffic,
+    trial_devices=prefer_value("SUB_TRIAL_DEVICES", is_int=True) or base_devices,
+    ref_bonus_days=prefer_value("SUB_REF_BONUS_DAYS", is_int=True)
 )
 
 
