@@ -36,7 +36,7 @@ instruction = {
 }
 
 
-def to_tg_link(value: str) -> str:
+def to_tg_link(value: str | None) -> str | None:
     """Возвращает значение юзернейма/ссылки в качестве изначальной ссылки, либо ссылки на тг"""
     if not value or value.startswith('https://'):
         return value
