@@ -1,5 +1,5 @@
 import logging
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import tg_config
@@ -54,48 +54,33 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
     Значение one (количество подписок) определяет, вернётся ли пользователь
     в главное меню, либо в меню выбора подписок 
     """
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text='Продлить', 
-                callback_data=f'month_{uuid}', 
-                style='success', 
-                icon_custom_emoji_id='5260687119092817530'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Устройства', 
-                callback_data=f'device_{uuid}', 
-                style='primary', 
-                icon_custom_emoji_id='5258508428212445001'
-            )
-        ]
-    ]
-    
-    if instruction:
-        buttons.append(
-            [
-                InlineKeyboardButton(
-                    text='Инструкция', 
-                    callback_data='manual', 
-                    style='primary', 
-                    icon_custom_emoji_id='5258328383183396223'
-                )
-            ]
+    builder = InlineKeyboardBuilder()
+    builder.buttons(
+        text='Продлить', 
+        callback_data=f'month_{uuid}', 
+        style='success', 
+        icon_custom_emoji_id='5260687119092817530'
+    )
+    builder.buttons(
+        text='Устройства', 
+        callback_data=f'device_{uuid}', 
+        style='primary', 
+        icon_custom_emoji_id='5258508428212445001'
+    )
+    if any(instruction.values()):
+        builder.buttons(
+            text='Инструкция', 
+            callback_data='manual', 
+            style='primary', 
+            icon_custom_emoji_id='5258328383183396223'
         )
-
-    buttons.append(
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data=f'{'subs' if one else 'get_subs'}', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
+    builder.buttons(
+        text='Назад', 
+        callback_data=f'{'subs' if one else 'get_subs'}', 
+        icon_custom_emoji_id='5258236805890710909'
     )
 
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return builder.adjust(1).as_markup()
 
 
 def day_word(days: int, iskl: bool | None = None) -> str:

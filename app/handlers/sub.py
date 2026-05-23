@@ -1,7 +1,7 @@
 import logging
 from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 from service.remna_cmds import remna
 from handlers.keyboards import choose_action, day_word
@@ -32,56 +32,43 @@ async def subs_menu(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     res = await remna.has_user_sub(tg_id=tg_id)
 
-    # главная кнопка Подписки
-    buttons = [
-        [
-            InlineKeyboardButton(
-                text='Новая подписка', 
-                callback_data=f"{'is_buy' if res else 'month_'}",
-                style='success', 
-                icon_custom_emoji_id='5258165702707125574'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Мои подписки', 
-                callback_data='get_subs', 
-                style='success', 
-                icon_custom_emoji_id='5226513232549664618'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Пробный период', 
-                callback_data='AYS',
-                style='danger', 
-                icon_custom_emoji_id='5258105663359294787'
-            )
-        ]
-    ]
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text='Новая подписка', 
+        callback_data=f"{'is_buy' if res else 'month_'}",
+        style='success', 
+        icon_custom_emoji_id='5258165702707125574'
+    )
+    builder.button(
+        text='Мои подписки', 
+        callback_data='get_subs', 
+        style='success', 
+        icon_custom_emoji_id='5226513232549664618'
+    )
+    builder.button(
+        text='Пробный период', 
+        callback_data='AYS',
+        style='danger', 
+        icon_custom_emoji_id='5258105663359294787'
+    )
 
     if tg_proxy:
-        buttons.append([
-            InlineKeyboardButton(
-                text='Прокси для тг', 
-                callback_data='proxy', 
-                style='primary', 
-                icon_custom_emoji_id='5258073068852485953'
-            )])
+        builder.button(
+            text='Прокси для тг', 
+            callback_data='proxy', 
+            style='primary', 
+            icon_custom_emoji_id='5258073068852485953'
+        )
 
-    buttons.append([
-        InlineKeyboardButton(
-            text='В меню', 
-            callback_data='menu', 
-            icon_custom_emoji_id='5257963315258204021'
-        )])
-
-    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
-
+    builder.button(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
@@ -89,28 +76,24 @@ async def subs_menu(callback: CallbackQuery):
 @router.callback_query(F.data == 'proxy')
 async def proxy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
-    back_subs = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Подключить', 
-                url=tg_proxy, 
-                icon_custom_emoji_id='5323404142809467476', 
-                style='success'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='subs', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text='Подключить', 
+        url=tg_proxy, 
+        icon_custom_emoji_id='5323404142809467476', 
+        style='success'
+    )
+    builder.button(
+        text='Назад', 
+        callback_data='subs', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
     await callback.message.edit_caption(
         caption=f'<b>— — Прокси — —</b>\n\nСсылка на наш прокси:\n\n{tg_proxy}\n\n'
         'Прокси полностью бесплатный, вы также можете делиться им с другими людьми!',
         parse_mode='HTML',
-        reply_markup=back_subs
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
@@ -125,7 +108,6 @@ def sub_action(users: dict[str, str], page=None) -> InlineKeyboardMarkup:
             style='primary',
             icon_custom_emoji_id='5260399854500191689'
         )
-    
     builder.button(
         text="Назад", 
         callback_data="subs", 
@@ -188,24 +170,19 @@ async def device_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('device_')
 
-    # кнопка Сбросить устройства
-    device_delete = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Сбросить устройства', 
-                callback_data=f'delete_device_{uuid}', 
-                style='danger', 
-                icon_custom_emoji_id='5260687681733533075'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='get_subs', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text='Сбросить устройства', 
+        callback_data=f'delete_device_{uuid}', 
+        style='danger', 
+        icon_custom_emoji_id='5260687681733533075'
+    )
+    builder.button(
+        text='Назад', 
+        callback_data='get_subs', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
+
     await callback.message.edit_caption(
         caption='<b>— — Управление устройствами — —</b>\n\n\n'
         'Если вы использовали подписку в нескольких приложениях, из-за чего подписка не добавляется в другом приложении'
@@ -213,7 +190,7 @@ async def device_control(callback: CallbackQuery):
         ' Это удалит все привязанные устройства к подписке и позволит использовать её на новом устройстве и приложениях.'
         ' Подписка останется на всех подключённых устройствах и начнёт считаться устройством при первом её обновлении',
         parse_mode='HTML',
-        reply_markup=device_delete
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
@@ -223,59 +200,52 @@ async def delete_device(callback: CallbackQuery):
     uuid = callback.data.removeprefix('delete_device_')
     await remna.delete_devices(uuid=uuid)
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='В меню', 
-                callback_data='menu', 
-                icon_custom_emoji_id='5257963315258204021'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
+
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — Сброс устройств — —</b>\n\n\n'
         'Устройства успешно сброшены! Можете использовать её на других устройствах!',
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
 # кнопка Купить подписку. выполняется если у клиента уже есть подписка
 @router.callback_query(F.data == "is_buy")
 async def is_buy(callback: CallbackQuery):
-    # кнопка выбора новой подписки при наличии активной
-    buy_mk = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Купить новую', 
-                callback_data='month_', 
-                style='success', 
-                icon_custom_emoji_id='5258108352008823107'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Мои подписки', 
-                callback_data='get_subs',
-                style='primary', 
-                icon_custom_emoji_id='5226513232549664618'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='subs', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text='Купить новую', 
+        callback_data='month_', 
+        style='success', 
+        icon_custom_emoji_id='5258108352008823107'
+    )
+    builder.button(
+        text='Мои подписки', 
+        callback_data='get_subs',
+        style='primary', 
+        icon_custom_emoji_id='5226513232549664618'
+    )
+    builder.button(
+        text='Назад', 
+        callback_data='subs', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n'
         'У вас уже есть активные подписки. Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке "Мои подписки"',
-        reply_markup=buy_mk,
-        parse_mode='HTML')
+        reply_markup=builder.adjust(1).as_markup(),
+        parse_mode='HTML'
+    )
 
 
 def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
@@ -285,39 +255,33 @@ def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
     if user_uuid:
         callback = f'agreement_{user_uuid}_'
 
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text=f'1 месяц ({one_month}₽)', 
-                callback_data=f'{callback}1', 
-                icon_custom_emoji_id='5258165702707125574',
-                style='success'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text=f'3 месяца ({three_month}₽)', 
-                callback_data=f'{callback}3', 
-                icon_custom_emoji_id='5258165702707125574',
-                style='success'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text=f'12 месяцев ({one_year}₽)', 
-                callback_data=f'{callback}12', 
-                icon_custom_emoji_id='5258165702707125574',
-                style='success'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='subs', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=f'1 месяц ({one_month}₽)', 
+        callback_data=f'{callback}1', 
+        icon_custom_emoji_id='5258165702707125574',
+        style='success'
+    )
+    builder.button(
+        text=f'3 месяца ({three_month}₽)', 
+        callback_data=f'{callback}3', 
+        icon_custom_emoji_id='5258165702707125574',
+        style='success'
+    )
+    builder.button(
+        text=f'12 месяцев ({one_year}₽)', 
+        callback_data=f'{callback}12', 
+        icon_custom_emoji_id='5258165702707125574',
+        style='success'
+    )
+    builder.button(
+        text='Назад', 
+        callback_data='subs', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
+
+    return builder.adjust(1).as_markup()
 
 
 # продление или покупка подписки
@@ -351,30 +315,26 @@ async def buy_month(callback: CallbackQuery):
         uuid = ''
         month = full
 
-    # кнопка оплаты подписки
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Перейти к оплате', 
-                callback_data=f'upay_{full}', 
-                style='success', 
-                icon_custom_emoji_id='5258204546391351475'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data=f'month_{uuid}', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text='Перейти к оплате', 
+        callback_data=f'upay_{full}', 
+        style='success', 
+        icon_custom_emoji_id='5258204546391351475'
+    )
+    builder.button(
+        text='Назад', 
+        callback_data=f'month_{uuid}', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
+
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Оплата — —</b>\n\n\n'
         f'Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
         f'{caption[1]}\n\n\nДля продолжения нажмите кнопку <b>Оплатить</b>',
-        reply_markup=kb,
+        reply_markup=builder.adjust(1).as_markup(),
         parse_mode='HTML'
     )
 
@@ -405,20 +365,18 @@ async def upay(callback: CallbackQuery, bot_info):
     )
     text = '<tg-emoji emoji-id="5258336354642697821">📃</tg-emoji> Нажмите <b>кнопку ниже</b> для перехода на страницу оплаты'
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="Оплатить", 
-                url=payment,
-                icon_custom_emoji_id='5258204546391351475',
-                style="success"
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Оплатить", 
+        url=payment,
+        icon_custom_emoji_id='5258204546391351475',
+        style="success"
+    )
+
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", 
-        reply_markup=kb, 
+        reply_markup=builder.adjust(1).as_markup(), 
         parse_mode='HTML'
     )
 
@@ -429,37 +387,30 @@ async def ays(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     user_has_sub = await remna.has_user_sub(tg_id=tg_id)
 
-    buttons = []
+    builder = InlineKeyboardBuilder()
     text = 'У вас уже есть подписка, пробный период недоступен!'
     
     if not user_has_sub:
         text = f'Вы уверены, что хотите активировать пробный период? Он действует {trial_days} {day_word(trial_days)} и позволяет оценить качество наших услуг. '\
-            'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
-        buttons.append(
-            [
-                InlineKeyboardButton(
-                    text='Активировать', 
-                    callback_data='test_period', 
-                    style='danger', 
-                    icon_custom_emoji_id='5323761960829862762'
-                )
-            ]
+                'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
+        builder.buttons(
+            text='Активировать', 
+            callback_data='test_period', 
+            style='danger', 
+            icon_custom_emoji_id='5323761960829862762'
         )
-    buttons.append(
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='subs', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
+
+    builder.buttons(
+        text='Назад', 
+        callback_data='subs', 
+        icon_custom_emoji_id='5258236805890710909'
     )
-    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Пробный период — —</b>\n\n\n{text}",
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
@@ -476,28 +427,23 @@ async def test_period(callback: CallbackQuery):
         device_limit=trial_devices
     )
 
-    test_sub_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Инструкция', 
-                callback_data='manual', 
-                style='primary', 
-                icon_custom_emoji_id='5258328383183396223'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='В меню', 
-                callback_data='menu', 
-                icon_custom_emoji_id='5257963315258204021'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.buttons(
+        text='Инструкция', 
+        callback_data='manual', 
+        style='primary', 
+        icon_custom_emoji_id='5258328383183396223'
+    )
+    builder.buttons(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Пробный период — —</b>\n\n\n"
         f"Пробный период на {trial_days} {day_word(trial_days)} активирован! Ваша подписка:\n\n{sub}",
         parse_mode='HTML',
-        reply_markup=test_sub_kb
+        reply_markup=builder.adjust(1).as_markup()
     )
     logger.info(f"Пробная подписка на {trial_days} {day_word(trial_days)} успешно выдана пользователю {username}")

@@ -4,9 +4,10 @@ import asyncio
 import logging
 
 from aiogram import F, Router, Bot
-from aiogram.types import Message, CallbackQuery, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.exceptions import TelegramForbiddenError
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from handlers.keyboards import inline_start, day_word
 from service.remna_cmds import remna
@@ -20,13 +21,7 @@ notify_days.sort()
 
 logger = logging.getLogger(__name__)
 router = Router()
-kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text='Мои подписки', 
-            callback_data='get_subs', 
-            icon_custom_emoji_id='5226513232549664618'
-        )]
-    ])
+
 
 
 def get_random_photo() -> str:
@@ -39,6 +34,12 @@ def get_random_photo() -> str:
 
 async def push(bot: Bot) -> None:
     """Каждый час пытается выслать уведомление пользователю об окончании подписки"""
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text='Мои подписки', 
+        callback_data='get_subs', 
+        icon_custom_emoji_id='5226513232549664618'
+    )
     while True:
         for day in notify_days:
             users = await remna.expire_day(days=day)
@@ -49,7 +50,7 @@ async def push(bot: Bot) -> None:
                         photo=FSInputFile(get_random_photo()),
                         caption='<b>— — Уведомление — —</b>\n\n\n'
                         f'Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!',
-                        reply_markup=kb,
+                        reply_markup=builder.adjust(1).as_markup(),
                         parse_mode='HTML'
                     )
                     logger.info(f"Пользователь {user} уведомлён")

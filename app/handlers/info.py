@@ -1,7 +1,8 @@
 import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import tg_config
 
@@ -37,7 +38,7 @@ instruction = {
 
 def to_tg_link(value: str) -> str:
     """Возвращает значение юзернейма/ссылки в качестве изначальной ссылки, либо ссылки на тг"""
-    if value.startswith('https://'):
+    if not value or value.startswith('https://'):
         return value
     return f'https://t.me/{value.removeprefix("@")}'
 
@@ -46,53 +47,54 @@ support_link = to_tg_link(tg_config.support_link)
 channel_link = to_tg_link(tg_config.channel_link)
 
 
-info_buttons = []
+kb_builder = InlineKeyboardBuilder()
 
 if any(instruction.values()):
-    info_buttons.append(InlineKeyboardButton(
+    kb_builder.buttons(
         text='Как подключить?',
         callback_data='manual',
         style='primary', 
-        icon_custom_emoji_id='5258328383183396223'))
+        icon_custom_emoji_id='5258328383183396223'
+    )
 else:
-    logger.info("Кнопка 'Инструкция' отключена")
-
-
+    logger.info("Кнопка 'Как подключить?' отключена")
 if info_text:
-    info_buttons.append(InlineKeyboardButton(
+    kb_builder.buttons(
         text='О тарифе', 
         callback_data='info', 
         style='primary', 
-        icon_custom_emoji_id='5258503720928288433'))
+        icon_custom_emoji_id='5258503720928288433'
+    )
 else:
     logger.info("Кнопка 'О тарифе' отключена")
-
-
-info_menu_buttons = [info_buttons] + [
-    [
-        InlineKeyboardButton(
-            text='Поддержка', 
-            url=support_link, 
-            icon_custom_emoji_id='5316727448644103237', 
-            style='success'), 
-        InlineKeyboardButton(
-            text='ТГ канал', 
-            url=channel_link, 
-            icon_custom_emoji_id='5260268501515377807', 
-            style='danger')
-    ],
-    [
-        InlineKeyboardButton(
-            text='В меню', 
-            callback_data='menu', 
-            icon_custom_emoji_id='5257963315258204021')
-    ]
-]
+if support_link:
+    kb_builder.buttons(
+        text='Поддержка',
+        url=support_link,
+        icon_custom_emoji_id='5316727448644103237',
+        style='success'
+    ),
+else:
+    logger.info("Кнопка 'Поддержка' отключена")
+if channel_link:
+    kb_builder.buttons(
+        text='ТГ канал', 
+        url=channel_link, 
+        icon_custom_emoji_id='5260268501515377807', 
+        style='danger'
+    )
+else:
+    logger.info("Кнопка 'ТГ канал' отключена")
+kb_builder.buttons(
+    text='В меню', 
+    callback_data='menu', 
+    icon_custom_emoji_id='5257963315258204021'
+)
 
 
 def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     """Формируем клавиатуру по наличию файлов"""
-    buttons = []
+    builder = InlineKeyboardBuilder()
 
     labels = {
         "android": ("Android", "manual_android", "5174698235989590607", 'success'),
@@ -104,31 +106,20 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     for device, value in instruction.items():
         if value:
             device_text, callback, emoji, style = labels[device]
-            buttons.append(
-                [
-                    InlineKeyboardButton(
-                        text=device_text, 
-                        callback_data=callback, 
-                        icon_custom_emoji_id=emoji,
-                        style=style
-                    )
-                ]
+            builder.buttons(
+                text=device_text, 
+                callback_data=callback, 
+                icon_custom_emoji_id=emoji,
+                style=style
             )
-    
-    buttons.append(
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='info_menu', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
+    builder.buttons(
+        text='Назад', 
+        callback_data='info_menu', 
+        icon_custom_emoji_id='5258236805890710909'
     )
 
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return builder.adjust(1).as_markup()
 
-
-info_menu_kb = InlineKeyboardMarkup(inline_keyboard=info_menu_buttons)
 manual_kb = create_manual_kb(instruction)
 
 
@@ -139,7 +130,7 @@ async def info_menu(callback: CallbackQuery):
     await callback.message.edit_caption(
         caption='<b>— — Информация — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=info_menu_kb
+        reply_markup=kb_builder.adjust(1).as_markup()
     )
 
 
@@ -159,47 +150,39 @@ async def manual(callback: CallbackQuery):
 async def manual_android(callback: CallbackQuery):
     device = callback.data.removeprefix('manual_')
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Мои подписки', 
-                callback_data='get_subs', 
-                icon_custom_emoji_id='5226513232549664618', 
-                style='success'
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='manual', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.buttons(
+        text='Мои подписки', 
+        callback_data='get_subs', 
+        icon_custom_emoji_id='5226513232549664618', 
+        style='success'
+    )
+    builder.buttons(
+        text='Назад', 
+        callback_data='manual', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — Инструкция — —</b>\n\n{instruction[device]}',
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
 # кнопка О тарифе
 @router.callback_query(F.data == 'info')
 async def info(callback: CallbackQuery):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Назад', 
-                callback_data='info_menu', 
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.buttons(
+        text='Назад', 
+        callback_data='info_menu', 
+        icon_custom_emoji_id='5258236805890710909'
+    )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — О тарифе — —</b>\n\n\n{info_text}',
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
