@@ -17,7 +17,7 @@ class Users:
         tg_id: int, 
         username: str | None = None, 
         referral_from: str | None = None,
-        has_user_sub: int | None = 0
+        has_user_sub: int | None = None
     ):
         """Создаёт запись о пользователе в бд, либо обновляет его"""
         async with aiosqlite.connect(self.database.path) as db:

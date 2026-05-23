@@ -114,7 +114,7 @@ async def yookassa_webhook(request: web.Request):
         bonus_days = 0
 
         user = await database.users.get_user(user_id)
-        referral_from = int(user["referral_from"])
+        referral_from = int(user["referral_from"]) if user["referral_from"] else None
 
         if referral_from and sub_config.ref_bonus_days and not user["has_payed_sub"]:
             bonus_days = sub_config.ref_bonus_days

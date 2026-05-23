@@ -92,6 +92,7 @@ async def get_start(message: Message, command: CommandObject, bot_info):
                 parse_mode='HTML'
             )
         else:
+            has_payed_sub = 0
             ref_from: int | None = await database.users.referral_from_by_ref_code(ref_code)
             if not ref_from:
                 await message.answer(
