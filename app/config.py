@@ -51,6 +51,9 @@ class TgConfig():
     support_link: str | None
     channel_link: str | None
 
+    privacy_url: str | None
+    terms_url: str | None
+
     admin_ids: str | None
     proxy: str | None
     notify_days: list | None
@@ -106,6 +109,10 @@ tg_config = TgConfig(
     token=require_value("TG_TOKEN"),
     support_link=prefer_value("TG_SUPPORT_LINK"),
     channel_link=prefer_value("TG_CHANNEL_LINK"),
+
+    privacy_url=prefer_value("TG_PRIVACY_URL"),
+    terms_url=prefer_value("TG_TERMS_URL"),
+
     admin_ids=prefer_value("TG_ADMIN_IDS"),
     proxy=prefer_value("TG_PROXY"),
     notify_days=prefer_value("TG_NOTIFY_DAYS")

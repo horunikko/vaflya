@@ -20,6 +20,17 @@ return_url = payment_config.return_url
 
 tg_proxy = tg_config.proxy
 
+
+def gen_url(value: str | None) -> str | None:
+    """Возвращает значение юзернейма/ссылки в качестве изначальной ссылки, либо ссылки на тг"""
+    if not value or value.startswith('https://'):
+        return value
+    return f"https://{value}"
+
+
+privacy_url = gen_url(tg_config.privacy_url)
+terms_url = gen_url(tg_config.terms_url)
+
 trial_days = sub_config.trial_days
 trial_traffic = sub_config.trial_traffic
 trial_devices = sub_config.trial_devices
@@ -300,11 +311,25 @@ async def renewal_month(callback: CallbackQuery):
         parse_mode='HTML'
     )
 
+
 # предварительное соглашение с пользователем перед оплатой
 @router.callback_query(F.data.startswith('agreement_'))
 async def buy_month(callback: CallbackQuery):
     full = callback.data.removeprefix('agreement_')
     suffix = {"1": "", "3": "а", "12": "ев"}
+
+    text = ''
+    start_text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Перед оплатой вам необходимо принять'
+    end_text = '. Нажимая кнопку <b>Перейти к оплате</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
+    terms_text = f'<a href="{terms_url}">Условия пользования</a>'
+    privacy_text = f'<a href="{privacy_url}">Политику конфиденциальности</a>'
+
+    if terms_url and privacy_url:
+        text = f'{start_text} {terms_text} и {privacy_text}{end_text}'
+    elif terms_url:
+        text = f'{start_text} {terms_text}{end_text}'
+    elif privacy_url:
+        text = f'{start_text} {privacy_text}{end_text}'
 
     if '_' in full:
         caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
@@ -323,6 +348,20 @@ async def buy_month(callback: CallbackQuery):
         style='success', 
         icon_custom_emoji_id='5258204546391351475'
     )
+    if terms_url:
+        builder.button(
+            text='Условия пользования',
+            url=terms_url,
+            style='primary',
+            icon_custom_emoji_id='5249231689695115145'
+        )
+    if privacy_url:
+        builder.button(
+            text='Политика конфеденциальности',
+            url=privacy_url,
+            style='primary',
+            icon_custom_emoji_id='5258011929993026890'
+        )
     builder.button(
         text='Назад', 
         callback_data=f'month_{uuid}', 
@@ -332,8 +371,10 @@ async def buy_month(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Оплата — —</b>\n\n\n'
-        f'Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
-        f'{caption[1]}\n\n\nДля продолжения нажмите кнопку <b>Оплатить</b>',
+        f'<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
+        f'{caption[1]}\n\n\n'
+        f'{text}'
+        '<tg-emoji emoji-id="5260450573768990626">➡️</tg-emoji> Для продолжения нажмите кнопку <b>Перейти к оплате</b>',
         reply_markup=builder.adjust(1).as_markup(),
         parse_mode='HTML'
     )
