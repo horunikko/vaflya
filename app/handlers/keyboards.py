@@ -55,26 +55,26 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
     в главное меню, либо в меню выбора подписок 
     """
     builder = InlineKeyboardBuilder()
-    builder.buttons(
+    builder.button(
         text='Продлить', 
         callback_data=f'month_{uuid}', 
         style='success', 
         icon_custom_emoji_id='5260687119092817530'
     )
-    builder.buttons(
+    builder.button(
         text='Устройства', 
         callback_data=f'device_{uuid}', 
         style='primary', 
         icon_custom_emoji_id='5258508428212445001'
     )
     if any(instruction.values()):
-        builder.buttons(
+        builder.button(
             text='Инструкция', 
             callback_data='manual', 
             style='primary', 
             icon_custom_emoji_id='5258328383183396223'
         )
-    builder.buttons(
+    builder.button(
         text='Назад', 
         callback_data=f'{'subs' if one else 'get_subs'}', 
         icon_custom_emoji_id='5258236805890710909'

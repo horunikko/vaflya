@@ -50,7 +50,7 @@ channel_link = to_tg_link(tg_config.channel_link)
 kb_builder = InlineKeyboardBuilder()
 
 if any(instruction.values()):
-    kb_builder.buttons(
+    kb_builder.button(
         text='Как подключить?',
         callback_data='manual',
         style='primary', 
@@ -59,7 +59,7 @@ if any(instruction.values()):
 else:
     logger.info("Кнопка 'Как подключить?' отключена")
 if info_text:
-    kb_builder.buttons(
+    kb_builder.button(
         text='О тарифе', 
         callback_data='info', 
         style='primary', 
@@ -68,7 +68,7 @@ if info_text:
 else:
     logger.info("Кнопка 'О тарифе' отключена")
 if support_link:
-    kb_builder.buttons(
+    kb_builder.button(
         text='Поддержка',
         url=support_link,
         icon_custom_emoji_id='5316727448644103237',
@@ -77,7 +77,7 @@ if support_link:
 else:
     logger.info("Кнопка 'Поддержка' отключена")
 if channel_link:
-    kb_builder.buttons(
+    kb_builder.button(
         text='ТГ канал', 
         url=channel_link, 
         icon_custom_emoji_id='5260268501515377807', 
@@ -85,7 +85,7 @@ if channel_link:
     )
 else:
     logger.info("Кнопка 'ТГ канал' отключена")
-kb_builder.buttons(
+kb_builder.button(
     text='В меню', 
     callback_data='menu', 
     icon_custom_emoji_id='5257963315258204021'
@@ -106,13 +106,13 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     for device, value in instruction.items():
         if value:
             device_text, callback, emoji, style = labels[device]
-            builder.buttons(
+            builder.button(
                 text=device_text, 
                 callback_data=callback, 
                 icon_custom_emoji_id=emoji,
                 style=style
             )
-    builder.buttons(
+    builder.button(
         text='Назад', 
         callback_data='info_menu', 
         icon_custom_emoji_id='5258236805890710909'
@@ -130,7 +130,7 @@ async def info_menu(callback: CallbackQuery):
     await callback.message.edit_caption(
         caption='<b>— — Информация — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=kb_builder.adjust(1).as_markup()
+        reply_markup=kb_builder.adjust(2).as_markup()
     )
 
 
@@ -151,13 +151,13 @@ async def manual_android(callback: CallbackQuery):
     device = callback.data.removeprefix('manual_')
 
     builder = InlineKeyboardBuilder()
-    builder.buttons(
+    builder.button(
         text='Мои подписки', 
         callback_data='get_subs', 
         icon_custom_emoji_id='5226513232549664618', 
         style='success'
     )
-    builder.buttons(
+    builder.button(
         text='Назад', 
         callback_data='manual', 
         icon_custom_emoji_id='5258236805890710909'
@@ -175,7 +175,7 @@ async def manual_android(callback: CallbackQuery):
 @router.callback_query(F.data == 'info')
 async def info(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
-    builder.buttons(
+    builder.button(
         text='Назад', 
         callback_data='info_menu', 
         icon_custom_emoji_id='5258236805890710909'

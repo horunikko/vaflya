@@ -393,14 +393,14 @@ async def ays(callback: CallbackQuery):
     if not user_has_sub:
         text = f'Вы уверены, что хотите активировать пробный период? Он действует {trial_days} {day_word(trial_days)} и позволяет оценить качество наших услуг. '\
                 'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
-        builder.buttons(
+        builder.button(
             text='Активировать', 
             callback_data='test_period', 
             style='danger', 
             icon_custom_emoji_id='5323761960829862762'
         )
 
-    builder.buttons(
+    builder.button(
         text='Назад', 
         callback_data='subs', 
         icon_custom_emoji_id='5258236805890710909'
@@ -428,13 +428,13 @@ async def test_period(callback: CallbackQuery):
     )
 
     builder = InlineKeyboardBuilder()
-    builder.buttons(
+    builder.button(
         text='Инструкция', 
         callback_data='manual', 
         style='primary', 
         icon_custom_emoji_id='5258328383183396223'
     )
-    builder.buttons(
+    builder.button(
         text='В меню', 
         callback_data='menu', 
         icon_custom_emoji_id='5257963315258204021'
