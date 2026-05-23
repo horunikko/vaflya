@@ -1,7 +1,7 @@
 import logging
 from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery
 
 from config import sub_config
 from handlers.keyboards import day_word
@@ -85,15 +85,12 @@ async def ref_stats(callback: CallbackQuery, bot_info):
     ref_count = int(user["referral_count"])
     bonus_days = ref_bonus_days * ref_count
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Назад',
-                callback_data='ref_system',
-                icon_custom_emoji_id='5258236805890710909'
-            )
-        ]
-    ])
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text='Назад',
+        callback_data='ref_system',
+        icon_custom_emoji_id='5258236805890710909'
+    )
 
     await callback.message.edit_caption(
         caption='<b>— — Рефералка — —</b>\n\n\n'
@@ -101,5 +98,5 @@ async def ref_stats(callback: CallbackQuery, bot_info):
         f'Количество приведённых вами пользователей: {ref_count}\n'
         f'Количество бонусных дней: {bonus_days}',
         parse_mode='HTML',
-        reply_markup=kb
+        reply_markup=builder.adjust(1).as_markup()
     )
