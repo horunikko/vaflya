@@ -55,6 +55,7 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
     в главное меню, либо в меню выбора подписок 
     """
     builder = InlineKeyboardBuilder()
+    x = 1
     builder.button(
         text='Продлить', 
         callback_data=f'month_{uuid}', 
@@ -68,6 +69,7 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
         icon_custom_emoji_id='5258508428212445001'
     )
     if any(instruction.values()):
+        x = 2
         builder.button(
             text='Инструкция', 
             callback_data='manual', 
@@ -80,7 +82,7 @@ def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
         icon_custom_emoji_id='5258236805890710909'
     )
 
-    return builder.adjust(1).as_markup()
+    return builder.adjust(1, x).as_markup()
 
 
 def day_word(days: int, iskl: bool | None = None) -> str:

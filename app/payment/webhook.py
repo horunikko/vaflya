@@ -170,7 +170,7 @@ async def yookassa_webhook(request: web.Request):
             reply_markup=kb,
             parse_mode="HTML"
         )
-
+        
         await database.users.activate_sub(user_id)
 
         if NALOGO_ACTIVE:

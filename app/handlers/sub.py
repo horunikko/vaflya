@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from service.remna_cmds import remna
 from handlers.keyboards import choose_action, day_word
 from payment.yookassa import create_payment
+from database.db import database
 from config import payment_config, tg_config, sub_config
 
 
@@ -42,6 +43,7 @@ async def subs_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
     res = await remna.has_user_sub(tg_id=tg_id)
+    x = 1
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -64,8 +66,9 @@ async def subs_menu(callback: CallbackQuery):
     )
 
     if tg_proxy:
+        x = 2
         builder.button(
-            text='Прокси для тг', 
+            text='ТГ Прокси', 
             callback_data='proxy', 
             style='primary', 
             icon_custom_emoji_id='5258073068852485953'
@@ -79,7 +82,7 @@ async def subs_menu(callback: CallbackQuery):
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=builder.adjust(1).as_markup()
+        reply_markup=builder.adjust(2, x).as_markup()
     )
 
 
@@ -323,8 +326,10 @@ async def buy_month(callback: CallbackQuery):
     end_text = '. Нажимая кнопку <b>Перейти к оплате</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
     terms_text = f'<a href="{terms_url}">Условия пользования</a>'
     privacy_text = f'<a href="{privacy_url}">Политику конфиденциальности</a>'
+    x = 1
 
     if terms_url and privacy_url:
+        x = 2
         text = f'{start_text} {terms_text} и {privacy_text}{end_text}'
     elif terms_url:
         text = f'{start_text} {terms_text}{end_text}'
@@ -375,7 +380,7 @@ async def buy_month(callback: CallbackQuery):
         f'{caption[1]}\n\n\n'
         f'{text}'
         '<tg-emoji emoji-id="5260450573768990626">➡️</tg-emoji> Для продолжения нажмите кнопку <b>Перейти к оплате</b>',
-        reply_markup=builder.adjust(1).as_markup(),
+        reply_markup=builder.adjust(1, x).as_markup(),
         parse_mode='HTML'
     )
 
@@ -387,6 +392,16 @@ async def upay(callback: CallbackQuery, bot_info):
     user_id = callback.from_user.id
     username = callback.from_user.username if callback.from_user.username else str(user_id)
     uuid = ''
+
+    user = await database.users.get_user(user_id)
+
+    if not user:
+        await callback.message.edit_caption(
+            caption=f'<b>— — Ошибка — —</b>\n\n\n'
+            'Для корректной работы перезапустите бота командой /start',
+            parse_mode='HTML'
+        )
+        return
 
     if '_' in month:
         uuid = month.split("_")[0]

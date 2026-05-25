@@ -24,7 +24,7 @@ class Database:
                 referral_from TEXT,
                 referral_code TEXT UNIQUE,
                 referral_count INTEGER DEFAULT 0,
-                has_payed_sub INTEGER DEFAULT 0
+                has_payed_sub INTEGER
             )
             """)
 

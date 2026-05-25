@@ -96,7 +96,8 @@ async def ref_stats(callback: CallbackQuery, bot_info):
         caption='<b>— — Рефералка — —</b>\n\n\n'
         f'<tg-emoji emoji-id="5260730055880876557">📎</tg-emoji> Ваша реферальная ссылка: <code>{ref_url}</code> <i>(кликабельно)</i>\n\n'
         f'Количество приведённых вами пользователей: {ref_count}\n'
-        f'Количество бонусных дней: {bonus_days}',
+        f'Количество бонусных дней: {bonus_days}\n\n'
+        f'За каждого приведённого человека вы получите по {ref_bonus_days} {day_word(ref_bonus_days)} ко всем вашим подпискам!',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )

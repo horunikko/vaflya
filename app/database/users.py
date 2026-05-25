@@ -84,7 +84,6 @@ class Users:
                 UPDATE users
                 SET has_payed_sub = 1
                 WHERE telegram_id = ?
-                AND has_payed_sub == 0
                 """,
                 (telegram_id,))
             
@@ -177,3 +176,12 @@ class Users:
                 row = await cursor.fetchone()
 
                 return row[0] if row else None
+            
+
+    async def delete_user(self, telegram_id: int) -> None:
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                "DELETE FROM users WHERE telegram_id = ?",
+                (telegram_id,)
+            )
+            await db.commit()
