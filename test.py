@@ -1,53 +1,23 @@
 import logging
+import asyncio
 from datetime import datetime, timedelta, timezone
 from remnawave import RemnawaveSDK
-from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto
+from remnawave.controllers import RemnawaveSettingsController
+from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto, GetRemnawaveSettingsResponseDto
 from remnawave.exceptions.general import NotFoundError
-
-from config import remna_config
-from database.db import database
 
 
 logger = logging.getLogger(__name__)
 
 
 class Remnawave:
-    def __init__(self, token, panel_url, hwid_limit):
+    def __init__(self, token, panel_url, domain, hwid_limit):
         self.token = token
         self.panel_url = panel_url
+        self.domain = domain
         self.hwid_limit = hwid_limit
 
         self.sdk = RemnawaveSDK(base_url=self.panel_url, token=self.token)
-
-
-    async def expire_day(self, days: int) -> list[str]:
-        """Возвращает список из telegram id пользователей, чья подписка истекает через {days} дней"""
-        start = 0
-        users = []
-        date = datetime.now(timezone.utc)
-        delta = date + timedelta(days=days)
-        
-        while True:
-            response = await self.sdk.users.get_all_users(size=25, start=start)
-            if not response.users:
-                break
-            
-            for user in response.users:
-                if user.expire_at > date:
-
-                    sub_days = await database.notifications.get_days(str(user.uuid))
-
-                    # создание записи в бд при её отсутствии
-                    if sub_days is None:
-                        await database.notifications.create_or_update(str(user.uuid))
-                        
-                    # а вот тут уже идёт основная проверка
-                    if delta >= user.expire_at and (days < sub_days or sub_days == 0):
-                        users.append(user.telegram_id)
-                        await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=days)
-            start += 25
-        
-        return users
 
 
     async def text_user_stats(self, user, hwid) -> str:
@@ -83,7 +53,7 @@ class Remnawave:
                 f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{len(hwid.devices)}</b>/{hwid_device}\n\n'
                 f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'
                 f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>\n\n'
-                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> (<i>кликабельно</i>)\n'
+                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{self.domain}{user.short_uuid}</code> (<i>кликабельно</i>)\n'
                 )
 
 
@@ -160,7 +130,8 @@ class Remnawave:
                 hwid_device_limit=device_limit
             )
         )
-        return f'<code>{new_user.subscription_url}</code>'
+
+        return f'<code>{self.domain}{new_user.short_uuid}</code>'
 
 
     async def update_user(self, uuid: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
@@ -189,9 +160,14 @@ class Remnawave:
         )
         return user.username
 
+    async def test(self):
+
 
 remna = Remnawave(
-    token=remna_config.token,
-    panel_url=remna_config.panel_url,
+    token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiYzdkYjZlNTAtMzRkYS00YmEwLTg2ZDAtODhjNjg5MGY4NzJiIiwidXNlcm5hbWUiOm51bGwsInJvbGUiOiJBUEkiLCJpYXQiOjE3Nzg0ODQyODksImV4cCI6MTA0MTgzOTc4ODl9.XlFovBepjepZx38w1-oOiYOWLrN_QMvtbmVP9nyE0CQ",
+    panel_url="http://127.0.0.1:3000",
+    domain="https://color.honukiro.quest/",
     hwid_limit=None
 )
+
+asyncio.run(remna.test())

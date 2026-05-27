@@ -63,7 +63,6 @@ class TgConfig():
 class RemnaConfig():
     """Конфиг ремны"""
     token: str
-    sub_domain: str
     panel_url: str
 
 
@@ -121,7 +120,6 @@ tg_config = TgConfig(
 
 remna_config = RemnaConfig(
     token=require_value("REMNA_TOKEN"),
-    sub_domain=require_value("REMNA_SUB_DOMAIN"),
     panel_url=require_value("REMNA_PANEL_URL"),
 )
 
