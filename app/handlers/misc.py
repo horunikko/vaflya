@@ -2,16 +2,11 @@ import logging
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config import tg_config
+from config import config
 from handlers.info import instruction
 
 
 logger = logging.getLogger(__name__)
-
-admin_list = tg_config.admin_ids
-
-if admin_list:
-    admin_list = admin_list.split(",")
 
 
 def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
@@ -36,7 +31,7 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
         style='danger', 
         icon_custom_emoji_id='5258503720928288433'
     )
-    if str(user_id) in admin_list:
+    if str(user_id) in config.telegram.admin_ids:
         builder.button(
             text='Админ панель', 
             callback_data='admin_menu', 
@@ -103,3 +98,15 @@ def day_word(days: int, iskl: bool | None = None) -> str:
         return "дня"
 
     return "дней"
+
+suffix = {
+    "1": "",
+    "3": "а",
+    "12": "ев"
+}
+
+price_list = {
+    "1": config.price.one,
+    "3": config.price.three, 
+    "12": config.price.twelve
+}
