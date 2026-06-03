@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 from handlers.menu import push
 from database.db import database
 from payment.webhook import yookassa_webhook
-from config import tg_config
+from config import config
 
 
-bot = Bot(token=tg_config.token)
+bot = Bot(token=config.telegram.token)
 dp = Dispatcher()
 
 

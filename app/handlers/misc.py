@@ -19,12 +19,13 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
         style='success', 
         icon_custom_emoji_id="5226513232549664618"
     )
-    builder.button(
-        text='Реферальная система',
-        callback_data='ref_system',
-        style='primary',
-        icon_custom_emoji_id='5258165702707125574'
-    )
+    if config.subscription.ref_bonus_days:
+        builder.button(
+            text='Реферальная система',
+            callback_data='ref_system',
+            style='primary',
+            icon_custom_emoji_id='5258165702707125574'
+        )
     builder.button(
         text='Информация', 
         callback_data='info_menu', 

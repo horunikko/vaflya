@@ -4,32 +4,13 @@ import aiohttp
 from uuid import uuid4
 
 from database.db import database
-from config import payment_config
+from config import config
+
+from handlers.misc import suffix, price_list
 
 
 logger = logging.getLogger(__name__)
-
-
-SHOP_ID = payment_config.shop_id
-SECRET_KEY = payment_config.secret_key
-
-ONE_MONTH = payment_config.one_month
-THREE_MONTHS = payment_config.three_month
-ONE_YEAR = payment_config.one_year
-
 YOOKASSA_API_URL = "https://api.yookassa.ru/v3/payments"
-
-suffix = {
-    "1": "",
-    "3": "а",
-    "12": "ев"
-}
-
-price_list = {
-    "1": ONE_MONTH,
-    "3": THREE_MONTHS,
-    "12": ONE_YEAR
-}
 
 
 async def create_payment(user_id: int, username: str, month: str, return_url: str, uuid: str | None = None) -> str:
@@ -40,7 +21,7 @@ async def create_payment(user_id: int, username: str, month: str, return_url: st
 
         "capture": True,
         "confirmation": {"type": "redirect", "return_url": return_url},
-        "description": (f'{"Продление подписки" if uuid else "Подписка"} на {month} мес.'),
+        "description": (f'{"Продление подписки" if uuid else "Подписка"} на {month} месяц{suffix[month]}'),
 
         "metadata": {
             "user_id": str(user_id),
@@ -50,7 +31,7 @@ async def create_payment(user_id: int, username: str, month: str, return_url: st
         }
     }
 
-    auth = base64.b64encode(f"{SHOP_ID}:{SECRET_KEY}".encode()).decode()
+    auth = base64.b64encode(f"{config.yookassa.shop_id}:{config.yookassa.secret_key}".encode()).decode()
 
     headers = {
         "Authorization": f"Basic {auth}",

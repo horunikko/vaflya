@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config import tg_config
+from config import config
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -36,17 +36,6 @@ instruction = {
 }
 
 
-def to_tg_link(value: str | None) -> str | None:
-    """Возвращает значение юзернейма/ссылки в качестве изначальной ссылки, либо ссылки на тг"""
-    if not value or value.startswith('https://'):
-        return value
-    return f'https://t.me/{value.removeprefix("@")}'
-
-
-support_link = to_tg_link(tg_config.support_link)
-channel_link = to_tg_link(tg_config.channel_link)
-
-
 kb_builder = InlineKeyboardBuilder()
 
 if any(instruction.values()):
@@ -67,19 +56,19 @@ if info_text:
     )
 else:
     logger.info("Кнопка 'О тарифе' отключена")
-if support_link:
+if config.telegram.support_link:
     kb_builder.button(
         text='Поддержка',
-        url=support_link,
+        url=config.telegram.support_link,
         icon_custom_emoji_id='5316727448644103237',
         style='success'
     ),
 else:
     logger.info("Кнопка 'Поддержка' отключена")
-if channel_link:
+if config.telegram.channel_link:
     kb_builder.button(
         text='ТГ канал', 
-        url=channel_link, 
+        url=config.telegram.channel_link, 
         icon_custom_emoji_id='5260268501515377807', 
         style='danger'
     )

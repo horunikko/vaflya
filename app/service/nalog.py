@@ -5,21 +5,11 @@ import httpx
 from lib.nalogo import Client
 from lib.nalogo import UnauthorizedException
 
-from config import nalogo_config, payment_config
+from config import config
+from handlers.misc import suffix, price_list
 
 
 logger = logging.getLogger(__name__)
-
-inn = nalogo_config.inn
-password = nalogo_config.password
-proxy = nalogo_config.proxy
-ONE_MONTH = payment_config.one_month
-THREE_MONTHS = payment_config.three_month
-ONE_YEAR = payment_config.one_year
-
-
-price_list = {"1": ONE_MONTH, "3": THREE_MONTHS, "12": ONE_YEAR}
-suffix = {"1": "", "3": "а", "12": "ев"}
 
 
 async def create_simple_receipt(month: int, user: str):
@@ -30,17 +20,17 @@ async def create_simple_receipt(month: int, user: str):
         base_url="https://lknpd.nalog.ru/api",
         storage_path="app/handlers/tokens.json",
         device_id="my-device-123",
-        proxy=proxy
+        proxy=config.nalogo.proxy
     )
 
     if not await client.get_access_token():
-        await client.create_new_access_token(inn, password)
+        await client.create_new_access_token(config.nalogo.inn, config.nalogo.password)
 
     for att in range(1, 4):
         try:
             result = await client.income().create(
                 name=f"Оплата подписки на {month} месяц{suffix[str(month)]}. ID пользователя: {user}",
-                amount=price_list[str(month)], # цена
+                amount=price_list[str(month)],
                 quantity=1
             )
             logger.info(f"Удачное формирование чека на сумму {price_list[str(month)]}. ID пользователя: {user}")
@@ -48,7 +38,7 @@ async def create_simple_receipt(month: int, user: str):
 
         except UnauthorizedException:
             logger.error("Токен недействителен, получаем новый...")
-            await client.create_new_access_token(inn, password)
+            await client.create_new_access_token(config.nalogo.inn, config.nalogo.password)
 
         except httpx.ProxyError:
             logger.error("Неправильный username или пароль у прокси")

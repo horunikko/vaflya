@@ -5,22 +5,14 @@ from aiohttp import web
 from aiogram import Bot
 from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 
-from config import nalogo_config, sub_config
+from config import config
 from service.nalog import create_simple_receipt
-from handlers.keyboards import day_word
+from handlers.misc import day_word, suffix
 from service.remna_cmds import remna
 from database.db import database
 
 
 logger = logging.getLogger(__name__)
-
-NALOGO_ACTIVE = nalogo_config.active
-
-suffix = {
-    "1": "",
-    "3": "а",
-    "12": "ев"
-}
 
 
 kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -116,8 +108,8 @@ async def yookassa_webhook(request: web.Request):
         user = await database.users.get_user(user_id)
         referral_from = int(user["referral_from"]) if user["referral_from"] else None
 
-        if referral_from and sub_config.ref_bonus_days and not user["has_payed_sub"]:
-            bonus_days = sub_config.ref_bonus_days
+        if referral_from and config.subscription.ref_bonus_days and not user["has_payed_sub"]:
+            bonus_days = config.subscription.ref_bonus_days
             subs = await remna.user_name(referral_from)
 
             for _, ref_uuid in subs.items():
@@ -146,8 +138,8 @@ async def yookassa_webhook(request: web.Request):
                 tg_id=str(user_id), 
                 month=int(month),
                 days=bonus_days,
-                traffic=sub_config.base_traffic, 
-                device_limit=sub_config.base_devices
+                traffic=config.subscription.base_traffic, 
+                device_limit=config.subscription.base_devices
             )
             text = f"Ваша подписка на {month} месяц{suffix[month]}{add_text}:\n\n{sub}"
             logger.info("Подписка удачно создана")
@@ -157,8 +149,8 @@ async def yookassa_webhook(request: web.Request):
                 uuid=uuid, 
                 month=int(month),
                 days=bonus_days,
-                traffic=sub_config.base_traffic,
-                device_limit=sub_config.base_devices
+                traffic=config.subscription.base_traffic,
+                device_limit=config.subscription.base_devices
             )
             text = f"Подписка {sub_name} продлена на {month} месяц{suffix[month]}{add_text}!"
             logger.info(text)
@@ -173,7 +165,7 @@ async def yookassa_webhook(request: web.Request):
         
         await database.users.activate_sub(user_id)
 
-        if NALOGO_ACTIVE:
+        if config.nalogo.active:
             await create_simple_receipt(month=month, user=str(user_id))
 
         return web.Response(text="ok")

@@ -4,7 +4,7 @@ from remnawave import RemnawaveSDK
 from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto
 from remnawave.exceptions.general import NotFoundError
 
-from config import remna_config
+from config import config
 from database.db import database
 
 
@@ -43,7 +43,8 @@ class Remnawave:
                         
                     # а вот тут уже идёт основная проверка
                     if delta >= user.expire_at and (days < sub_days or sub_days == 0):
-                        users.append(user.telegram_id)
+                        if user.telegram_id:
+                            users.append(user.telegram_id)
                         await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=days)
             start += 25
         
@@ -109,9 +110,9 @@ class Remnawave:
         return bool(await self.sdk.users.get_users_by_telegram_id(str(tg_id)))
         
 
-    async def user_name(self, tg_id: str) -> dict[str, str]:
+    async def user_name(self, tg_id: str | int) -> dict[str, str]:
         """Возвращает словарь с парами значений всех подписок username : uuid по tg_id"""
-        users = await self.sdk.users.get_users_by_telegram_id(tg_id)
+        users = await self.sdk.users.get_users_by_telegram_id(str(tg_id))
         res = {}
 
         for user in users:
@@ -191,7 +192,7 @@ class Remnawave:
 
 
 remna = Remnawave(
-    token=remna_config.token,
-    panel_url=remna_config.panel_url,
+    token=config.remnawave.token,
+    panel_url=config.remnawave.panel_url,
     hwid_limit=None
 )

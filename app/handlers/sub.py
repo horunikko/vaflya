@@ -3,38 +3,18 @@ from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
+from handlers.misc import choose_action, day_word, suffix, price_list
+
 from service.remna_cmds import remna
-from handlers.keyboards import choose_action, day_word
 from payment.yookassa import create_payment
+
 from database.db import database
-from config import payment_config, tg_config, sub_config
+from config import config
 
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-
-one_month = payment_config.one_month
-three_month = payment_config.three_month
-one_year = payment_config.one_year
-return_url = payment_config.return_url
-
-tg_proxy = tg_config.proxy
-
-
-def gen_url(value: str | None) -> str | None:
-    """Возвращает значение юзернейма/ссылки в качестве изначальной ссылки, либо ссылки на тг"""
-    if not value or value.startswith('https://'):
-        return value
-    return f"https://{value}"
-
-
-privacy_url = gen_url(tg_config.privacy_url)
-terms_url = gen_url(tg_config.terms_url)
-
-trial_days = sub_config.trial_days
-trial_traffic = sub_config.trial_traffic
-trial_devices = sub_config.trial_devices
+return_url = config.yookassa.return_url
 
 
 # главное меню подписок по кнопке Подписки
@@ -61,11 +41,11 @@ async def subs_menu(callback: CallbackQuery):
     builder.button(
         text='Пробный период', 
         callback_data='AYS',
-        style='danger', 
+        style='primary', 
         icon_custom_emoji_id='5258105663359294787'
     )
 
-    if tg_proxy:
+    if config.telegram.proxy:
         x = 2
         builder.button(
             text='ТГ Прокси', 
@@ -94,7 +74,7 @@ async def proxy(callback: CallbackQuery):
 
     builder.button(
         text='Подключить', 
-        url=tg_proxy, 
+        url=config.telegram.proxy, 
         icon_custom_emoji_id='5323404142809467476', 
         style='success'
     )
@@ -104,7 +84,7 @@ async def proxy(callback: CallbackQuery):
         icon_custom_emoji_id='5258236805890710909'
     )
     await callback.message.edit_caption(
-        caption=f'<b>— — Прокси — —</b>\n\nСсылка на наш прокси:\n\n{tg_proxy}\n\n'
+        caption=f'<b>— — Прокси — —</b>\n\nСсылка на наш прокси:\n\n{config.telegram.proxy}\n\n'
         'Прокси полностью бесплатный, вы также можете делиться им с другими людьми!',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
@@ -271,24 +251,13 @@ def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
 
     builder = InlineKeyboardBuilder()
 
-    builder.button(
-        text=f'1 месяц ({one_month}₽)', 
-        callback_data=f'{callback}1', 
-        icon_custom_emoji_id='5258165702707125574',
-        style='success'
-    )
-    builder.button(
-        text=f'3 месяца ({three_month}₽)', 
-        callback_data=f'{callback}3', 
-        icon_custom_emoji_id='5258165702707125574',
-        style='success'
-    )
-    builder.button(
-        text=f'12 месяцев ({one_year}₽)', 
-        callback_data=f'{callback}12', 
-        icon_custom_emoji_id='5258165702707125574',
-        style='success'
-    )
+    for month, price in price_list.items():
+        builder.button(
+            text=f'{month} месяц{suffix[month]} ({price}₽)', 
+            callback_data=f'{callback}1', 
+            icon_custom_emoji_id='5258165702707125574',
+            style='success'
+        )
     builder.button(
         text='Назад', 
         callback_data='subs', 
@@ -319,21 +288,20 @@ async def renewal_month(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('agreement_'))
 async def buy_month(callback: CallbackQuery):
     full = callback.data.removeprefix('agreement_')
-    suffix = {"1": "", "3": "а", "12": "ев"}
 
     text = ''
     start_text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Перед оплатой вам необходимо принять'
     end_text = '. Нажимая кнопку <b>Перейти к оплате</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
-    terms_text = f'<a href="{terms_url}">Условия пользования</a>'
-    privacy_text = f'<a href="{privacy_url}">Политику конфиденциальности</a>'
+    terms_text = f'<a href="{config.telegram.terms_url}">Условия пользования</a>'
+    privacy_text = f'<a href="{config.telegram.privacy_url}">Политику конфиденциальности</a>'
     x = 1
 
-    if terms_url and privacy_url:
+    if config.telegram.terms_url and config.telegram.privacy_url:
         x = 2
         text = f'{start_text} {terms_text} и {privacy_text}{end_text}'
-    elif terms_url:
+    elif config.telegram.terms_url:
         text = f'{start_text} {terms_text}{end_text}'
-    elif privacy_url:
+    elif config.telegram.privacy_url:
         text = f'{start_text} {privacy_text}{end_text}'
 
     if '_' in full:
@@ -353,17 +321,17 @@ async def buy_month(callback: CallbackQuery):
         style='success', 
         icon_custom_emoji_id='5258204546391351475'
     )
-    if terms_url:
+    if config.telegram.terms_url:
         builder.button(
             text='Условия пользования',
-            url=terms_url,
+            url=config.telegram.terms_url,
             style='primary',
             icon_custom_emoji_id='5249231689695115145'
         )
-    if privacy_url:
+    if config.telegram.privacy_url:
         builder.button(
             text='Политика конфеденциальности',
-            url=privacy_url,
+            url=config.telegram.privacy_url,
             style='primary',
             icon_custom_emoji_id='5258011929993026890'
         )
@@ -447,7 +415,7 @@ async def ays(callback: CallbackQuery):
     text = 'У вас уже есть подписка, пробный период недоступен!'
     
     if not user_has_sub:
-        text = f'Вы уверены, что хотите активировать пробный период? Он действует {trial_days} {day_word(trial_days)} и позволяет оценить качество наших услуг. '\
+        text = f'Вы уверены, что хотите активировать пробный период? Он действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг. '\
                 'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
         builder.button(
             text='Активировать', 
@@ -478,9 +446,9 @@ async def test_period(callback: CallbackQuery):
     sub = await remna.create_user(
         username=username, 
         tg_id=tg_id, 
-        days=trial_days, 
-        traffic=trial_traffic,
-        device_limit=trial_devices
+        days=config.subscription.trial_days, 
+        traffic=config.subscription.trial_traffic,
+        device_limit=config.subscription.trial_devices
     )
 
     builder = InlineKeyboardBuilder()
@@ -498,8 +466,8 @@ async def test_period(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Пробный период — —</b>\n\n\n"
-        f"Пробный период на {trial_days} {day_word(trial_days)} активирован! Ваша подписка:\n\n{sub}",
+        f"Пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} активирован! Ваша подписка:\n\n{sub}",
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
-    logger.info(f"Пробная подписка на {trial_days} {day_word(trial_days)} успешно выдана пользователю {username}")
+    logger.info(f"Пробная подписка на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} успешно выдана пользователю {username}")

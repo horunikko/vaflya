@@ -9,14 +9,11 @@ from aiogram.filters import CommandStart, CommandObject
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from handlers.keyboards import inline_start, day_word
+from handlers.misc import inline_start, day_word
 from service.remna_cmds import remna
+
 from database.db import database
-from config import tg_config, sub_config
-
-
-notify_days = list(map(int, tg_config.notify_days.split(",")))
-notify_days.sort()
+from config import config
 
 
 logger = logging.getLogger(__name__)
@@ -38,10 +35,11 @@ async def push(bot: Bot) -> None:
     builder.button(
         text='Мои подписки', 
         callback_data='get_subs', 
-        icon_custom_emoji_id='5226513232549664618'
+        icon_custom_emoji_id='5226513232549664618',
+        style='success'
     )
     while True:
-        for day in notify_days:
+        for day in config.telegram.notify_days:
             users = await remna.expire_day(days=day)
             for user in users:
                 try:
@@ -77,7 +75,7 @@ async def get_start(message: Message, command: CommandObject, bot_info):
     caption = f'<b>— — Вас приветствует {bot_info.first_name} ! — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>'
 
     if ref_code:
-        if not sub_config.ref_bonus_days:
+        if not config.subscription.ref_bonus_days:
             await message.answer(
                 text="<b>— — Рефералка — —</b>\n\n\n"
                 '<tg-emoji emoji-id="5260412365739925015">🚫</tg-emoji> '
@@ -113,7 +111,7 @@ async def get_start(message: Message, command: CommandObject, bot_info):
                 await message.answer(
                     text="<b>— — Рефералка — —</b>\n\n\n"
                     '<tg-emoji emoji-id="5260726538302660868">✅</tg-emoji> '
-                    f"Реферальная ссылка от пользователя {user} активирована! После оплаты вы получите дополнительных {sub_config.ref_bonus_days} {day_word(sub_config.ref_bonus_days)}!",
+                    f"Реферальная ссылка от пользователя {user} активирована! После оплаты вы получите дополнительных {config.subscription.ref_bonus_days} {day_word(config.subscription.ref_bonus_days)}!",
                     parse_mode='HTML'
                 )
         await asyncio.sleep(2.5)

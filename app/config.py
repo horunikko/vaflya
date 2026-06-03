@@ -1,159 +1,249 @@
-import os
-import logging
-from dotenv import load_dotenv
-from dataclasses import dataclass
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator, HttpUrl, AnyUrl, model_validator, Field, BaseModel
 
-load_dotenv()
-logger = logging.getLogger(__name__)
+class Telegram(BaseSettings):
+    token: str
 
+    support_link: HttpUrl | None = None
+    channel_link: HttpUrl | None = None
 
-def require_value(name: str) -> str:
-    value = os.getenv(name).strip()
+    admin_ids: list[int] | None = None
 
-    if not value:
-        raise RuntimeError(f"Обязательный параметр {name} не указан. Укажите его в файле .env")
+    proxy: AnyUrl | None = None
 
-    return value
+    notify_days: list[int] | None = None
 
+    privacy_url: AnyUrl | None = None
+    terms_url: AnyUrl | None = None
 
-def prefer_value(name: str, is_int: bool = False) -> str:
-    value = os.getenv(name).strip()
+    @field_validator('admin_ids', mode='before')
+    def list_ids(cls, value):
+        if not value:
+            return None
 
-    if not value:
-        if name == 'YOOKASSA_RETURN_URL':
-            logger.info(f"{name} не указан, используем дефолтный")
-        else:
-            logger.info(f"Необязательный параметр {name} не указан, не используем его")
-        if is_int:
-            return 0
-        return None
-
-    if is_int:
-        return int(value)
+        return [int(x) for x in value.strip().split(',')]
     
-    return value
+    @field_validator('channel_link', "support_link", "proxy", mode='before')
+    def tg_link(cls, value: str | None):
+        if not value:
+            return None
+        
+        if value.startswith('https://') or value.startswith('tg://'):
+            return value
+        
+        if 't.me' in value:
+            return f'https://{value}'
+        
+        return f'https://t.me/{value.removeprefix("@")}'
+    
+
+    @field_validator('privacy_url', 'terms_url', mode='before')
+    def to_link(cls, value: str | None):
+        if not value:
+            return None
+        
+        if '.' not in value:
+            raise ValueError(f"Неправильный формат ссылки {value} !")
+        
+        if value.startswith('https://'):
+            return value
+        
+        return f'https://{value}'
+
+    
+    @field_validator('notify_days', mode='before')
+    def notify_range(cls, value: str | None):
+        if not value:
+            return
+
+        result = set()
+
+        for part in str(value).split(","):
+            part = part.strip()
+
+            if not part:
+                continue
+
+            if "-" in part:
+                start, end = map(int, part.split("-", 1))
+
+                if start > end:
+                    raise ValueError(f"Некорректный диапазон TG_NOTIFY_DAYS: {part}")
+
+                result.update(range(start, end + 1))
+            else:
+                result.add(int(part))
+
+        return sorted(result)
 
 
-nalogo_active = os.getenv("NALOGO_ACTIVE")
-nalogo_inn = os.getenv("NALOGO_INN")
-nalogo_password = os.getenv("NALOGO_PASSWORD")
+    @field_validator('support_link', 'channel_link', 'privacy_url', 'terms_url', mode='after')
+    def url_to_str(cls, value):
+        if not value:
+            return
+        return str(value)
+    
 
-if nalogo_active and not (nalogo_inn or nalogo_password):
-    raise RuntimeError(
-        "Отсутствует ИНН или пароль! Отключите формирование чеков или укажите ИНН или пароль!"
+    model_config = SettingsConfigDict(
+        env_prefix='TG_',
+        env_file='.env',
+        extra="ignore"
     )
 
 
-@dataclass(frozen=True)
-class TgConfig():
-    """Конфиг телеграмма"""
+class Remnawave(BaseSettings):
     token: str
-    support_link: str | None
-    channel_link: str | None
+    panel_url: HttpUrl
 
-    privacy_url: str | None
-    terms_url: str | None
+    @field_validator('panel_url', mode='after')
+    def url_check(cls, value: HttpUrl):
+        scheme = value.scheme
 
-    admin_ids: str | None
-    proxy: str | None
-    notify_days: list | None
+        is_local = any(x in value.host for x in ('127.0.0.', 'localhost', '0.0.0.'))
 
+        if scheme == 'https' and is_local:
+            raise ValueError('Локальные адреса должны использовать http://')
 
-@dataclass(frozen=True)
-class RemnaConfig():
-    """Конфиг ремны"""
-    token: str
-    panel_url: str
+        return value
 
 
-@dataclass(frozen=True)
-class SubConfig():
-    """Конфиг подписок"""
-    base_traffic: int | None
-    base_devices: int | None
+    @field_validator('panel_url', mode='after')
+    def url_to_str(cls, value):
+        if not value:
+            return
+        return str(value)
+            
 
-    trial_days: int | None
-    trial_traffic: int | None
-    trial_devices: int | None
+    model_config = SettingsConfigDict(
+        env_prefix='REMNAWAVE_',
+        env_file='.env',
+        extra="ignore"
+    )
 
-    ref_bonus_days: int | None
+
+class Subscription(BaseSettings):
+    base_traffic: int = 0
+    trial_traffic: int | None = None
+
+    base_devices: int = 0
+    trial_devices: int | None = None
+
+    trial_days: int = 0
+
+    ref_bonus_days: int = 0
 
 
-@dataclass(frozen=True)
-class PaymentConfig():
-    """Конфиг платёжки и цен"""
-    # юкасса
-    shop_id: str
+    @field_validator('base_traffic', 'base_devices', 'trial_days', 'ref_bonus_days', mode='before')
+    def empty_to_zero(cls, value: str | None):
+        return 0 if not value or value.strip() == "" else value
+
+
+    @field_validator('trial_traffic', 'trial_devices', mode='before')
+    def empty_to_none(cls, value: str | None):
+        if value != "0" and not value:
+            return None
+        return value
+
+
+    @model_validator(mode='after')
+    def empty_to_base(self):
+        if self.trial_traffic is None:
+            self.trial_traffic = self.base_traffic
+
+        if self.trial_devices is None:
+            self.trial_devices = self.base_devices
+
+        return self
+
+    model_config = SettingsConfigDict(
+        env_prefix='SUB_',
+        env_file='.env',
+        extra="ignore"
+    )
+
+
+class Yookassa(BaseSettings):
+    shop_id: int
     secret_key: str
+    return_url: AnyUrl | None = None
 
-    # цены
-    one_month: int
-    three_month: int
-    one_year: int
+    @field_validator('return_url', mode='before')
+    def empty_to_none(cls, value):
+        if not value:
+            return None
+        return value
 
-    # необязательный параметр
-    return_url: str | None
+    @field_validator('return_url', mode='after')
+    def url_to_str(cls, value):
+        if not value:
+            return
+        return str(value)
 
-
-@dataclass(frozen=True)
-class NalogoConfig():
-    """Конфиг налоговой"""
-    active: bool | None
-    inn: str | None
-    password: str | None
-    proxy: str | None
-
-
-tg_config = TgConfig(
-    token=require_value("TG_TOKEN"),
-    support_link=prefer_value("TG_SUPPORT_LINK"),
-    channel_link=prefer_value("TG_CHANNEL_LINK"),
-
-    privacy_url=prefer_value("TG_PRIVACY_URL"),
-    terms_url=prefer_value("TG_TERMS_URL"),
-
-    admin_ids=prefer_value("TG_ADMIN_IDS"),
-    proxy=prefer_value("TG_PROXY"),
-    notify_days=prefer_value("TG_NOTIFY_DAYS")
-)
+    model_config = SettingsConfigDict(
+        env_prefix='YOOKASSA_',
+        env_file='.env',
+        extra="ignore"
+    )
 
 
-remna_config = RemnaConfig(
-    token=require_value("REMNA_TOKEN"),
-    panel_url=require_value("REMNA_PANEL_URL"),
-)
+class Price(BaseSettings):
+    one: int = Field(ge=10)
+    three: int = Field(ge=10)
+    twelve: int = Field(ge=10)
+
+    model_config = SettingsConfigDict(
+        env_prefix='PRICE_',
+        env_file='.env',
+        extra="ignore"
+    )
 
 
-base_traffic = prefer_value("SUB_BASE_TRAFFIC", is_int=True)
-base_devices = prefer_value("SUB_BASE_DEVICES", is_int=True)
+class Nalogo(BaseSettings):
+    active: bool = False
+    inn: int | None = None
+    password: str | None = None
+    proxy: str | None = None
 
 
-sub_config = SubConfig(
-    base_traffic=base_traffic,
-    base_devices=base_devices or None,
+    @field_validator('active', mode='before')
+    def empty_to_false(cls, value: str | None):
+        if not value:
+            return False
+        return value
 
-    trial_days=prefer_value("SUB_TRIAL_DAYS", is_int=True) or 5,
-    trial_traffic=prefer_value("SUB_TRIAL_TRAFFIC", is_int=True) or base_traffic,
-    trial_devices=prefer_value("SUB_TRIAL_DEVICES", is_int=True) or base_devices,
-    ref_bonus_days=prefer_value("SUB_REF_BONUS_DAYS", is_int=True)
-)
-
-
-payment_config = PaymentConfig(
-    shop_id=require_value("YOOKASSA_SHOP_ID"),
-    secret_key=require_value("YOOKASSA_SECRET_KEY"),
-
-    one_month=int(require_value("ONE_MONTH")),
-    three_month=int(require_value("THREE_MONTHS")),
-    one_year=int(require_value("ONE_YEAR")),
-
-    return_url=prefer_value("YOOKASSA_RETURN_URL")
-)
+    @field_validator('inn', 'password', 'proxy', mode='before')
+    def empty_to_none(cls, value: str | None):
+        if not value:
+            return None
+        return value
 
 
-nalogo_config = NalogoConfig(
-    active=bool(prefer_value("NALOGO_ACTIVE")),
-    inn=prefer_value("NALOGO_INN"),
-    password=prefer_value("NALOGO_PASSWORD"),
-    proxy=prefer_value("NALOGO_PROXY")
-)
+    @model_validator(mode="after")
+    def validate_active(self):
+        if self.active:
+            if self.inn is None:
+                raise ValueError("Укажите NALOGO_INN")
+
+            if not self.password:
+                raise ValueError("Укажите NALOGO_PASSWORD")
+            
+        return self
+
+    model_config = SettingsConfigDict(
+        env_prefix='NALOGO_',
+        env_file='.env',
+        extra="ignore"
+    )
+
+
+class Config(BaseModel):
+    telegram: Telegram = Telegram()
+    remnawave: Remnawave = Remnawave()
+    subscription: Subscription = Subscription()
+    yookassa: Yookassa = Yookassa()
+    price: Price = Price()
+    nalogo: Nalogo = Nalogo()
+
+
+
+config = Config()

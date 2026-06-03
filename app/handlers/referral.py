@@ -3,14 +3,14 @@ from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery
 
-from config import sub_config
-from handlers.keyboards import day_word
+from config import config
+from handlers.misc import day_word
 from database.db import database
 
 
 logger = logging.getLogger(__name__)
 router = Router()
-ref_bonus_days = sub_config.ref_bonus_days
+ref_bonus_days = config.subscription.ref_bonus_days
 
 # Основное меню реферальной системы
 @router.callback_query(F.data == 'ref_system')
