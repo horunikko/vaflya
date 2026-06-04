@@ -2,6 +2,7 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.types import InlineKeyboardMarkup
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import config
@@ -126,12 +127,17 @@ async def info_menu(callback: CallbackQuery):
 # кнопка Инструкция
 @router.callback_query(F.data == 'manual')
 async def manual(callback: CallbackQuery):
-    await callback.answer(cache_time=1)
-    await callback.message.edit_caption(
-        caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
-        parse_mode='HTML', 
-        reply_markup=manual_kb
-    )
+    for _ in range(3):
+        try:
+            await callback.answer(cache_time=1)
+            await callback.message.edit_caption(
+                caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
+                parse_mode='HTML',
+                reply_markup=manual_kb
+            )
+            break
+        except TelegramBadRequest:
+            pass
 
 
 # сама по себе инструкция
