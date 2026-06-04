@@ -356,6 +356,13 @@ async def buy_month(callback: CallbackQuery):
 # создание платежа
 @router.callback_query(F.data.startswith('upay_'))
 async def upay(callback: CallbackQuery, bot_info):
+    await callback.answer(cache_time=1)
+    await callback.message.edit_caption(
+        caption=f"<b>— — Создание оплаты — —</b>\n\n\n"
+        "<i>Ссылка для оплаты формируется, подождите секунду...\n</i>",
+        parse_mode='HTML'
+    )
+
     month = callback.data.removeprefix('upay_')
     user_id = callback.from_user.id
     username = callback.from_user.username if callback.from_user.username else str(user_id)
@@ -397,7 +404,6 @@ async def upay(callback: CallbackQuery, bot_info):
         style="success"
     )
 
-    await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", 
         reply_markup=builder.adjust(1).as_markup(), 
