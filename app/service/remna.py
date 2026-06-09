@@ -40,6 +40,7 @@ class Remnawave:
                     # создание записи в бд при её отсутствии
                     if sub_days is None:
                         await database.notifications.create_or_update(str(user.uuid))
+                        sub_days = 0
                         
                     # а вот тут уже идёт основная проверка
                     if delta >= user.expire_at and (days < sub_days or sub_days == 0):
@@ -88,7 +89,7 @@ class Remnawave:
                 )
 
 
-    async def user_stats(self, tg_id: str | None = None, uuid: str | None =None) -> str | list[str] | None:
+    async def user_stats(self, tg_id: str | int | None = None, uuid: str | None =None) -> str | list[str] | None:
         """Функция получения статистики по tg_id или uuid.
         Возвращает список из инфы о всех подписках по тг айди или инфу о подписке по uuid"""
         if uuid:
@@ -97,7 +98,7 @@ class Remnawave:
             return await self.text_user_stats(user, hwid)
         if tg_id:
             subs = []
-            users = await self.sdk.users.get_users_by_telegram_id(tg_id)
+            users = await self.sdk.users.get_users_by_telegram_id(str(tg_id))
             for user in users:
                 hwid = await self.sdk.hwid.get_hwid_user(uuid=str(user.uuid))
                 subs.append(await self.text_user_stats(user, hwid))
@@ -105,7 +106,7 @@ class Remnawave:
         return None
 
 
-    async def has_user_sub(self, tg_id: str) -> bool:
+    async def has_user_sub(self, tg_id: str | int) -> bool:
         """Возвращает истину при наличии у пользователя подписки"""
         return bool(await self.sdk.users.get_users_by_telegram_id(str(tg_id)))
         
