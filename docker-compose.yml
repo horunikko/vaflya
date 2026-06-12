@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    restart: unless-stopped
+    restart: always
     container_name: vaflya-bot
     env_file:
       - .env
