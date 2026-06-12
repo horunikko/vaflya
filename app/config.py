@@ -16,6 +16,11 @@ class Telegram(BaseSettings):
     privacy_url: AnyUrl | None = None
     terms_url: AnyUrl | None = None
 
+    log_chat_id: int | None = None
+
+    log_payment_topic_id: int | None = None
+
+
     @field_validator('admin_ids', mode='before')
     def list_ids(cls, value):
         if not value:
@@ -23,6 +28,7 @@ class Telegram(BaseSettings):
 
         return [int(x) for x in value.strip().split(',')]
     
+
     @field_validator('channel_link', "support_link", "proxy", mode='before')
     def tg_link(cls, value: str | None):
         if not value:
@@ -82,6 +88,13 @@ class Telegram(BaseSettings):
         if not value:
             return
         return str(value)
+
+
+    @field_validator('log_chat_id', 'log_payment_topic_id', mode='before')
+    def empty_to_none(cls, value):
+        if not value:
+            return None
+        return value
     
 
     model_config = SettingsConfigDict(
