@@ -179,7 +179,7 @@ class Users:
             
 
     async def delete_user(self, telegram_id: int) -> None:
-        async with aiosqlite.connect(self.path) as db:
+        async with aiosqlite.connect(self.database.path) as db:
             await db.execute(
                 "DELETE FROM users WHERE telegram_id = ?",
                 (telegram_id,)
