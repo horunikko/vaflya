@@ -3,9 +3,9 @@ from aiogram import F, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
-from handlers.misc import choose_action, day_word, suffix, price_list
+from handlers.misc import choose_action, day_word, sub_action, suffix, price_list, ignore_not_modified
 
-from service.remna_cmds import remna
+from service.remna import remna
 from payment.yookassa import create_payment
 
 from database.db import database
@@ -19,6 +19,7 @@ return_url = config.yookassa.return_url
 
 # главное меню подписок по кнопке Подписки
 @router.callback_query(F.data == 'subs')
+@ignore_not_modified
 async def subs_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
@@ -30,19 +31,19 @@ async def subs_menu(callback: CallbackQuery):
         text='Новая подписка', 
         callback_data=f"{'is_buy' if res else 'month_'}",
         style='success', 
-        icon_custom_emoji_id='5258165702707125574'
+        icon_custom_emoji_id='5258362837411045098'
     )
     builder.button(
         text='Мои подписки', 
         callback_data='get_subs', 
         style='success', 
-        icon_custom_emoji_id='5226513232549664618'
+        icon_custom_emoji_id='5258513401784573443'
     )
     builder.button(
         text='Пробный период', 
         callback_data='AYS',
         style='primary', 
-        icon_custom_emoji_id='5258105663359294787'
+        icon_custom_emoji_id='5199457120428249992'
     )
 
     if config.telegram.proxy:
@@ -68,12 +69,13 @@ async def subs_menu(callback: CallbackQuery):
 
 # кнопка Прокси (работает только если указан tg_proxy)
 @router.callback_query(F.data == 'proxy')
+@ignore_not_modified
 async def proxy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text='Подключить', 
+        text='Подключить',
         url=config.telegram.proxy, 
         icon_custom_emoji_id='5323404142809467476', 
         style='success'
@@ -91,31 +93,12 @@ async def proxy(callback: CallbackQuery):
     )
 
 
-def sub_action(users: dict[str, str], page=None) -> InlineKeyboardMarkup:
-    """Возвращает клавиатуру для выбора подписок, с которой пользователь будет взаимодействовать"""
-    builder = InlineKeyboardBuilder()
-
-    for username, uuid in users.items():
-        builder.button(
-            text=username,
-            callback_data=f"sub_action_{str(uuid)}",
-            style='primary',
-            icon_custom_emoji_id='5260399854500191689'
-        )
-    builder.button(
-        text="Назад", 
-        callback_data="subs", 
-        icon_custom_emoji_id='5258236805890710909'
-    )
-    return builder.adjust(1).as_markup()
-
-
 # кнопка Мои подписки
 @router.callback_query(F.data == 'get_subs')
+@ignore_not_modified
 async def get_subs(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     subs_list = await remna.user_stats(tg_id=tg_id)
-    subs = await remna.user_name(tg_id)
 
     if not subs_list:
         await callback.answer(text='У вас нет подписок!', cache_time=1)
@@ -123,21 +106,23 @@ async def get_subs(callback: CallbackQuery):
 
     caption = ''
     for sub_n, sub in enumerate(subs_list):
-        caption += f"\n<blockquote>{sub_n+1}. {sub}\n"
+        caption += f"\n<blockquote>{sub_n+1}. {sub}"
+
+    subs = await remna.user_name(tg_id)
 
     # если подписок несколько
     if sub_n:
         text = "Выберите подписку для управления:"
-        kb = sub_action(subs)
+        kb = sub_action(users=subs, tg_id=tg_id)
 
     else:
-        text = "<i>Для продления подписки нажмите кнопку <b>Продлить</b></i>"
+        text = "<i>Для продления подписки нажмите кнопку <b>«Продлить»</b></i>"
         uuid = str(list(subs.values())[0])
         kb = choose_action(uuid)
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"<b>— — Подписки — —</b>\n\n{caption}\n{text}",
+        caption=f"<b>— — Подписки — —</b>\n{caption}\n{text}",
         parse_mode='HTML',
         reply_markup=kb
     )
@@ -145,6 +130,7 @@ async def get_subs(callback: CallbackQuery):
 
 # кнопка управления выбранной подпиской
 @router.callback_query(F.data.startswith("sub_action_"))
+@ignore_not_modified
 async def sub_control(callback: CallbackQuery):
     uuid = callback.data.removeprefix('sub_action_')
     caption = await remna.user_stats(uuid=uuid)
@@ -152,7 +138,7 @@ async def sub_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Управление подпиской — —</b>"
-        f"\n\n<blockquote>{caption}\n\nВыберите действие:",
+        f"\n\n<blockquote>{caption}\nВыберите действие:",
         parse_mode='HTML',
         reply_markup=choose_action(uuid, one=False)
     )
@@ -160,6 +146,7 @@ async def sub_control(callback: CallbackQuery):
 
 # кнопка управления устройствами
 @router.callback_query(F.data.startswith("device_"))
+@ignore_not_modified
 async def device_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('device_')
@@ -179,10 +166,9 @@ async def device_control(callback: CallbackQuery):
 
     await callback.message.edit_caption(
         caption='<b>— — Управление устройствами — —</b>\n\n\n'
-        'Если вы использовали подписку в нескольких приложениях, из-за чего подписка не добавляется в другом приложении'
-        ' или на другом устройстве, нажмите кнопку "Сбросить устройства".'
-        ' Это удалит все привязанные устройства к подписке и позволит использовать её на новом устройстве и приложениях.'
-        ' Подписка останется на всех подключённых устройствах и начнёт считаться устройством при первом её обновлении',
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Если подписка не добавляется на новом устройстве или в другом приложении, '
+        'нажмите <b>«Сбросить устройства»</b>. Это отвяжет все ранее подключённые устройства '
+        'и позволит подключить подписку снова. Текущие подключения продолжат работать до их обновления.',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -190,6 +176,7 @@ async def device_control(callback: CallbackQuery):
 
 # кнопка Сбросить устройства
 @router.callback_query(F.data.startswith("delete_device_"))
+@ignore_not_modified
 async def delete_device(callback: CallbackQuery):
     uuid = callback.data.removeprefix('delete_device_')
     await remna.delete_devices(uuid=uuid)
@@ -205,7 +192,7 @@ async def delete_device(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption=f'<b>— — Сброс устройств — —</b>\n\n\n'
-        'Устройства успешно сброшены! Можете использовать её на других устройствах!',
+        '<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Устройства успешно сброшены! Можете использовать подписку на других устройствах!',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -213,6 +200,7 @@ async def delete_device(callback: CallbackQuery):
 
 # кнопка Купить подписку. выполняется если у клиента уже есть подписка
 @router.callback_query(F.data == "is_buy")
+@ignore_not_modified
 async def is_buy(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
 
@@ -236,25 +224,29 @@ async def is_buy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n'
-        'У вас уже есть активные подписки. Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке "Мои подписки"',
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> У вас уже есть активные подписки. Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке <b>«Мои подписки»</b>',
         reply_markup=builder.adjust(1).as_markup(),
         parse_mode='HTML'
     )
 
 
-def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
+def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
     """Кливиатура с выбором времени покупки/продления подписки"""
     callback = 'agreement_'
+    sub_count = 1
 
     if user_uuid:
         callback = f'agreement_{user_uuid}_'
+
+    if user_uuid.isdigit():
+        sub_count = user_uuid
 
     builder = InlineKeyboardBuilder()
 
     for month, price in price_list.items():
         builder.button(
-            text=f'{month} месяц{suffix[month]} ({price}₽)', 
-            callback_data=f'{callback}1', 
+            text=f'{month} месяц{suffix[month]} ({int(price) * int(sub_count)}₽)',
+            callback_data=f'{callback}{month}',
             icon_custom_emoji_id='5258165702707125574',
             style='success'
         )
@@ -269,6 +261,7 @@ def time_choose(user_uuid: str | None) -> InlineKeyboardMarkup:
 
 # продление или покупка подписки
 @router.callback_query(F.data.startswith("month_"))
+@ignore_not_modified
 async def renewal_month(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('month_')
@@ -278,7 +271,7 @@ async def renewal_month(callback: CallbackQuery):
         caption = ["Продление подписки", "Выберите срок продления подписки:"]
 
     await callback.message.edit_caption(
-        caption=f'<b>— — {caption[0]} — —</b>\n\n\n{caption[1]}',
+        caption=f'<b>— — {caption[0]} — —</b>\n\n\n<tg-emoji emoji-id="5199457120428249992">🕔</tg-emoji> {caption[1]}',
         reply_markup=time_choose(uuid),
         parse_mode='HTML'
     )
@@ -286,12 +279,13 @@ async def renewal_month(callback: CallbackQuery):
 
 # предварительное соглашение с пользователем перед оплатой
 @router.callback_query(F.data.startswith('agreement_'))
+@ignore_not_modified
 async def buy_month(callback: CallbackQuery):
     full = callback.data.removeprefix('agreement_')
 
     text = ''
     start_text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Перед оплатой вам необходимо принять'
-    end_text = '. Нажимая кнопку <b>Перейти к оплате</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
+    end_text = '. Нажимая кнопку <b>«Перейти к оплате»</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
     terms_text = f'<a href="{config.telegram.terms_url}">Условия пользования</a>'
     privacy_text = f'<a href="{config.telegram.privacy_url}">Политику конфиденциальности</a>'
     x = 1
@@ -305,9 +299,12 @@ async def buy_month(callback: CallbackQuery):
         text = f'{start_text} {privacy_text}{end_text}'
 
     if '_' in full:
-        caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
         uuid = full.split("_")[0]
         month = full.split("_")[1]
+        caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
+        if uuid.isdigit():
+            caption = ['продление подписок', 'После оплаты подписки продлятся на выбранный срок']
+
     else:
         caption = ['подписку', 'После оплаты вы получите ссылку на подписку и инструкцию к ней.']
         uuid = ''
@@ -317,7 +314,7 @@ async def buy_month(callback: CallbackQuery):
 
     builder.button(
         text='Перейти к оплате', 
-        callback_data=f'upay_{full}', 
+        callback_data=f'upay_{full}',
         style='success', 
         icon_custom_emoji_id='5258204546391351475'
     )
@@ -347,7 +344,7 @@ async def buy_month(callback: CallbackQuery):
         f'<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
         f'{caption[1]}\n\n\n'
         f'{text}'
-        '<tg-emoji emoji-id="5260450573768990626">➡️</tg-emoji> Для продолжения нажмите кнопку <b>Перейти к оплате</b>',
+        '<tg-emoji emoji-id="5260450573768990626">➡️</tg-emoji> Для продолжения нажмите кнопку <b>«Перейти к оплате»</b>',
         reply_markup=builder.adjust(1, x).as_markup(),
         parse_mode='HTML'
     )
@@ -355,6 +352,7 @@ async def buy_month(callback: CallbackQuery):
 
 # создание платежа
 @router.callback_query(F.data.startswith('upay_'))
+@ignore_not_modified
 async def upay(callback: CallbackQuery, bot_info):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -413,15 +411,16 @@ async def upay(callback: CallbackQuery, bot_info):
 
 # кнопка Пробный период. Спрашивается, уверен ли пользователь
 @router.callback_query(F.data == 'AYS') # are you sure (дофига англичанин, да)
+@ignore_not_modified
 async def ays(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     user_has_sub = await remna.has_user_sub(tg_id=tg_id)
 
     builder = InlineKeyboardBuilder()
-    text = 'У вас уже есть подписка, пробный период недоступен!'
+    text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> У вас уже есть подписка, пробный период недоступен!'
     
     if not user_has_sub:
-        text = f'Вы уверены, что хотите активировать пробный период? Он действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг. '\
+        text = f'<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Вы уверены, что хотите активировать пробный период? Он действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг. '\
                 'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
         builder.button(
             text='Активировать', 
@@ -446,6 +445,7 @@ async def ays(callback: CallbackQuery):
 
 # выдача пробной подписки
 @router.callback_query(F.data == 'test_period')
+@ignore_not_modified
 async def test_period(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     username = callback.from_user.username if callback.from_user.username else tg_id
@@ -472,7 +472,7 @@ async def test_period(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption="<b>— — Пробный период — —</b>\n\n\n"
-        f"Пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} активирован! Ваша подписка:\n\n{sub}",
+        f"<tg-emoji emoji-id='5260416304224936047'>✅</tg-emoji> Пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} активирован! Ваша подписка:\n\n{sub}",
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
