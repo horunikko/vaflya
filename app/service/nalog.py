@@ -12,7 +12,7 @@ from handlers.misc import suffix, price_list
 logger = logging.getLogger(__name__)
 
 
-async def create_simple_receipt(month: int, user: str):
+async def create_simple_receipt(month: int, user_id: str, sub_count: int = 1):
     """Формирует и отправляет чек в налоговую. Принимает количество месяцев подписки,
     ищет соответствующую цену, а также добавляет в чек TELEGRAM ID клиента"""
 
@@ -26,14 +26,19 @@ async def create_simple_receipt(month: int, user: str):
     if not await client.get_access_token():
         await client.create_new_access_token(config.nalogo.inn, config.nalogo.password)
 
+    add_text = "подписки"
+
+    if sub_count > 1:
+        add_text = f"{sub_count} подписок"
+
     for att in range(1, 4):
         try:
             result = await client.income().create(
-                name=f"Оплата подписки на {month} месяц{suffix[str(month)]}. ID пользователя: {user}",
-                amount=price_list[str(month)],
+                name=f"Оплата {add_text} на {month} месяц{suffix[str(month)]}. ID пользователя: {user}",
+                amount=int(price_list[str(month)]) * sub_count,
                 quantity=1
             )
-            logger.info(f"Удачное формирование чека на сумму {price_list[str(month)]}. ID пользователя: {user}")
+            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user}")
             return result["approvedReceiptUuid"]
 
         except UnauthorizedException:
@@ -44,7 +49,7 @@ async def create_simple_receipt(month: int, user: str):
             logger.error("Неправильный username или пароль у прокси")
 
         except httpx.ReadTimeout:
-            logger.info(f"Удачное формирование чека на сумму {price_list[str(month)]}. ID пользователя: {user}")
+            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user}")
             break
         
         except Exception:

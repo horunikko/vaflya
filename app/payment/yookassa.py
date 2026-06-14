@@ -16,8 +16,13 @@ YOOKASSA_API_URL = "https://api.yookassa.ru/v3/payments"
 async def create_payment(user_id: int, username: str, month: str, return_url: str, uuid: str | None = None) -> str:
     """Создаёт платёж и возвращает ссылку на оплату"""
     logger.info("Начало формирования платежа")
+
+    sub_count = 1
+    if uuid and uuid.isdigit():
+        sub_count = int(uuid)
+
     payload = {
-        "amount": {"value": str(price_list[month]), "currency": "RUB"},
+        "amount": {"value": str(int(price_list[month]) * sub_count), "currency": "RUB"},
 
         "capture": True,
         "confirmation": {"type": "redirect", "return_url": return_url},
