@@ -1,5 +1,3 @@
-import os
-import random
 import asyncio
 import logging
 
@@ -8,9 +6,10 @@ from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.formatting import TextMention, Text
 
-from handlers.misc import inline_start, day_word
-from service.remna_cmds import remna
+from handlers.misc import inline_start, day_word, get_random_photo, ignore_not_modified
+from service.remna import remna
 
 from database.db import database
 from config import config
@@ -18,15 +17,6 @@ from config import config
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-
-
-def get_random_photo() -> str:
-    """Возвращает путь случайного файла из папки photos"""
-    files = [photo for photo in os.listdir("app/menu_photos")]
-
-    file = random.choice(files)
-    return os.path.join("app/menu_photos", file)
 
 
 async def push(bot: Bot) -> None:
@@ -38,6 +28,7 @@ async def push(bot: Bot) -> None:
         icon_custom_emoji_id='5226513232549664618',
         style='success'
     )
+    await asyncio.sleep(600)
     while True:
         for day in config.telegram.notify_days:
             users = await remna.expire_day(days=day)
@@ -121,7 +112,7 @@ async def get_start(message: Message, command: CommandObject, bot_info):
 
     await database.users.create(
         tg_id=tg_id, 
-        username=message.from_user.username,
+        username=message.from_user.username.lower() if message.from_user.username else None,
         referral_from=ref_from,
         has_user_sub=has_payed_sub
     )
@@ -135,10 +126,18 @@ async def get_start(message: Message, command: CommandObject, bot_info):
 
 # менюшка. для вызова из под кнопок "меню" и "назад"
 @router.callback_query(F.data == 'menu')
+@ignore_not_modified
 async def cb_menu(callback: CallbackQuery, bot_info):
+    tg_id = callback.from_user.id
+    has_payed_sub = None
+
+    if not await database.users.get_user(tg_id) and await remna.has_user_sub(tg_id):
+        has_payed_sub = 1
+    
     await database.users.create(
         tg_id=callback.from_user.id,
-        username=callback.from_user.username
+        username=callback.from_user.username.lower() if callback.from_user.username else None,
+        has_user_sub=has_payed_sub
     )
 
     caption = f'<b>— — Вас приветствует {bot_info.first_name} ! — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>'

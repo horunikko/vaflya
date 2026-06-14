@@ -1,4 +1,5 @@
 import logging
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.types import InlineKeyboardMarkup
@@ -6,36 +7,12 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import config
+from handlers.misc import instruction, ignore_not_modified, read_file
 
 logger = logging.getLogger(__name__)
 router = Router()
 
-
-def read_file(file: str) -> str | None:
-    """Функция чтения файла"""
-    try:
-        with open(file, "r", encoding="utf-8") as f:
-            text = f.read()
-
-            if not text.strip():
-                logger.info(f"Файл {file} пуст, не используем его")
-                return None
-            
-            return text
-        
-    except FileNotFoundError:
-        logger.info(f"Отсутствует файл {file}")
-        return None
-
-
 info_text = read_file("app/texts/info.txt")
-instruction = {
-    "android": read_file("app/texts/instruction_android.txt"),
-    "ios": read_file("app/texts/instruction_ios.txt"),
-    "windows": read_file("app/texts/instruction_windows.txt"),
-    "linux": read_file("app/texts/instruction_linux.txt")
-}
-
 
 kb_builder = InlineKeyboardBuilder()
 
@@ -50,7 +27,7 @@ else:
     logger.info("Кнопка 'Как подключить?' отключена")
 if info_text:
     kb_builder.button(
-        text='О тарифе', 
+        text='О тарифе',
         callback_data='info', 
         style='primary', 
         icon_custom_emoji_id='5258503720928288433'
@@ -115,6 +92,7 @@ manual_kb = create_manual_kb(instruction)
 
 # кнопка Информация в главном меню
 @router.callback_query(F.data == 'info_menu')
+@ignore_not_modified
 async def info_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -126,6 +104,7 @@ async def info_menu(callback: CallbackQuery):
 
 # кнопка Инструкция
 @router.callback_query(F.data == 'manual')
+@ignore_not_modified
 async def manual(callback: CallbackQuery):
     for _ in range(3):
         try:
@@ -142,6 +121,7 @@ async def manual(callback: CallbackQuery):
 
 # сама по себе инструкция
 @router.callback_query(F.data.startswith('manual_'))
+@ignore_not_modified
 async def manual_android(callback: CallbackQuery):
     device = callback.data.removeprefix('manual_')
 
@@ -168,6 +148,7 @@ async def manual_android(callback: CallbackQuery):
 
 # кнопка О тарифе
 @router.callback_query(F.data == 'info')
+@ignore_not_modified
 async def info(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.button(

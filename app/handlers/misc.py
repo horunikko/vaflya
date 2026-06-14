@@ -1,12 +1,32 @@
+import os
+import random
 import logging
+from functools import wraps
+
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.exceptions import TelegramBadRequest
 
 from config import config
-from handlers.info import instruction
 
 
 logger = logging.getLogger(__name__)
+
+
+def ignore_not_modified(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+
+        try:
+            return await func(*args, **kwargs)
+
+        except TelegramBadRequest as e:
+            if "message is not modified" in str(e):
+                return
+
+            logger.error()
+    
+    return wrapper
 
 
 def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
@@ -14,9 +34,9 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text='Подписки', 
-        callback_data='subs', 
-        style='success', 
+        text='Подписки',
+        callback_data='subs',
+        style='success',
         icon_custom_emoji_id="5226513232549664618"
     )
     if config.subscription.ref_bonus_days:
@@ -27,58 +47,92 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
             icon_custom_emoji_id='5258165702707125574'
         )
     builder.button(
-        text='Информация', 
-        callback_data='info_menu', 
-        style='danger', 
+        text='Информация',
+        callback_data='info_menu',
+        style='danger',
         icon_custom_emoji_id='5258503720928288433'
     )
-    if str(user_id) in config.telegram.admin_ids:
+    if user_id in config.telegram.admin_ids:
         builder.button(
-            text='Админ панель', 
-            callback_data='admin_menu', 
-            style='danger', 
+            text='Админ панель',
+            callback_data='admin_menu',
+            style='danger',
             icon_custom_emoji_id='5258096772776991776'
         )
         
     return builder.adjust(1).as_markup()
 
 
-def choose_action(uuid, one=True) -> InlineKeyboardMarkup:
-    """
-    Возвращает клавиатуру с выбором Продлить/Устройства/Назад.
+def choose_action(uuid: str, one: bool | None = True) -> InlineKeyboardMarkup:
+
+    """Возвращает клавиатуру с выбором Продлить/Устройства/Назад.
     Вызывается только с выводом информации о подписке пользователя.
     Значение one (количество подписок) определяет, вернётся ли пользователь
-    в главное меню, либо в меню выбора подписок 
-    """
+    в главное меню, либо в меню выбора подписок"""
+
     builder = InlineKeyboardBuilder()
+
     x = 1
     builder.button(
-        text='Продлить', 
-        callback_data=f'month_{uuid}', 
-        style='success', 
-        icon_custom_emoji_id='5260687119092817530'
+        text='Продлить',
+        callback_data=f'month_{uuid}',
+        style='success',
+        icon_custom_emoji_id='5258419835922030550'
     )
     builder.button(
-        text='Устройства', 
-        callback_data=f'device_{uuid}', 
-        style='primary', 
+        text='Устройства',
+        callback_data=f'device_{uuid}',
+        style='primary',
         icon_custom_emoji_id='5258508428212445001'
     )
     if any(instruction.values()):
         x = 2
         builder.button(
-            text='Инструкция', 
-            callback_data='manual', 
-            style='primary', 
+            text='Инструкция',
+            callback_data='manual',
+            style='primary',
             icon_custom_emoji_id='5258328383183396223'
         )
     builder.button(
-        text='Назад', 
-        callback_data=f'{'subs' if one else 'get_subs'}', 
+        text='Назад',
+        callback_data=f'{"subs" if one else "get_subs"}',
         icon_custom_emoji_id='5258236805890710909'
     )
 
     return builder.adjust(1, x).as_markup()
+
+
+def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = False) -> InlineKeyboardMarkup:
+    """Возвращает клавиатуру для выбора подписок, с которой пользователь будет взаимодействовать"""
+    builder = InlineKeyboardBuilder()
+
+    x = 0
+    first = 2
+    second = 1
+
+    for username, uuid in users.items():
+        x += 1
+        builder.button(
+            text=username,
+            callback_data=f"{'admin_' if admin else ''}sub_action_{str(uuid)}",
+            style='primary',
+            icon_custom_emoji_id='5260399854500191689'
+        )
+    builder.button(
+        text="Продлить все подписки",
+        callback_data=f"admin_mass_actionbs_{tg_id}" if admin else f"month_{x}",
+        style='success',
+        icon_custom_emoji_id='5260221883940347555'
+    )
+    builder.button(
+        text="Назад",
+        callback_data="admin_menu" if admin else "subs",
+        icon_custom_emoji_id='5258236805890710909'
+    )
+    if x > 3:
+        second = 2
+
+    return builder.adjust(first, second, 1, 1).as_markup()
 
 
 def day_word(days: int, iskl: bool | None = None) -> str:
@@ -100,6 +154,32 @@ def day_word(days: int, iskl: bool | None = None) -> str:
 
     return "дней"
 
+
+def get_random_photo() -> str:
+    """Возвращает путь случайного файла из папки photos"""
+    files = [photo for photo in os.listdir("app/menu_photos")]
+
+    file = random.choice(files)
+    return os.path.join("app/menu_photos", file)
+
+
+def read_file(file: str) -> str | None:
+    """Функция чтения файла"""
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            text = f.read()
+
+            if not text.strip():
+                logger.info(f"Файл {file} пуст, не используем его")
+                return None
+            
+            return text
+        
+    except FileNotFoundError:
+        logger.info(f"Отсутствует файл {file}")
+        return None
+
+
 suffix = {
     "1": "",
     "3": "а",
@@ -110,4 +190,11 @@ price_list = {
     "1": config.price.one,
     "3": config.price.three, 
     "12": config.price.twelve
+}
+
+instruction = {
+    "android": read_file("app/texts/instruction_android.txt"),
+    "ios": read_file("app/texts/instruction_ios.txt"),
+    "windows": read_file("app/texts/instruction_windows.txt"),
+    "linux": read_file("app/texts/instruction_linux.txt")
 }
