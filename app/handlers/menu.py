@@ -4,11 +4,11 @@ import logging
 from aiogram import F, Router, Bot
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import CommandStart, CommandObject
-from aiogram.exceptions import TelegramForbiddenError
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.formatting import TextMention, Text
+from aiogram.fsm.context import FSMContext
 
-from handlers.misc import inline_start, day_word, get_random_photo, errors_loging
+from handlers.misc import inline_start, day_word, get_random_photo, errors_loging, send_to_user
 from service.remna import remna
 
 from database.db import database
@@ -21,6 +21,7 @@ router = Router()
 
 async def push(bot: Bot) -> None:
     """Каждый час пытается выслать уведомление пользователю об окончании подписки"""
+
     builder = InlineKeyboardBuilder()
     builder.button(
         text='Мои подписки', 
@@ -28,30 +29,18 @@ async def push(bot: Bot) -> None:
         icon_custom_emoji_id='5226513232549664618',
         style='success'
     )
+    kb = builder.adjust(1).as_markup()
+
     await asyncio.sleep(600)
     while True:
         for day in config.telegram.notify_days:
+
+            text = '<b>— — Уведомление — —</b>\n\n\n'\
+                    f'Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!'
+
             users = await remna.expire_day(days=day)
             for user in users:
-                try:
-                    await bot.send_photo(
-                        chat_id=user,
-                        photo=FSInputFile(get_random_photo()),
-                        caption='<b>— — Уведомление — —</b>\n\n\n'
-                        f'Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!',
-                        reply_markup=builder.adjust(1).as_markup(),
-                        parse_mode='HTML'
-                    )
-                    logger.info(f"Пользователь {user} уведомлён")
-
-                except TelegramForbiddenError:
-                    logger.info(f"Пользователь {user} заблокировал бота")
-                    continue
-
-                except Exception:
-                    logger.exception(f"Непредвиденная ошибка")
-                    continue
-
+                await send_to_user(bot=bot, user=user, text=text, kb=kb)
                 await asyncio.sleep(0.05)
             
         await asyncio.sleep(3600)
@@ -60,7 +49,9 @@ async def push(bot: Bot) -> None:
 # менюшка командная
 @router.message(CommandStart())
 @errors_loging
-async def get_start(message: Message, command: CommandObject, bot_info):
+async def get_start(message: Message, command: CommandObject, bot_info, state: FSMContext):
+    await state.clear()
+
     ref_code = command.args
     tg_id = message.from_user.id
     ref_from = None
@@ -130,7 +121,9 @@ async def get_start(message: Message, command: CommandObject, bot_info):
 # менюшка. для вызова из под кнопок "меню" и "назад"
 @router.callback_query(F.data == 'menu')
 @errors_loging
-async def cb_menu(callback: CallbackQuery, bot_info):
+async def cb_menu(callback: CallbackQuery, bot_info, state: FSMContext):
+    await state.clear()
+
     tg_id = callback.from_user.id
     has_payed_sub = None
 

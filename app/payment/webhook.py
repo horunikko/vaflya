@@ -5,7 +5,7 @@ from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButto
 
 from config import config
 from service.nalog import create_simple_receipt
-from handlers.misc import day_word, suffix, get_random_photo
+from handlers.misc import day_word, suffix, get_random_photo, send_to_user
 from service.remna import remna
 from database.db import database
 
@@ -117,12 +117,11 @@ async def yookassa_webhook(request: web.Request):
 
             text = f'Вы получили {bonus_days} {day_word(bonus_days)} ко всем вашим подпискам за пользователя {username}'
 
-            await bot.send_photo(
-                chat_id=referral_from,
-                photo=FSInputFile(get_random_photo()),
-                caption=f"<b>— — Рефералка — —</b>\n\n\n{text}", 
-                reply_markup=ref_kb,
-                parse_mode="HTML"
+            await send_to_user(
+                bot=bot,
+                user=referral_from,
+                text=f"<b>— — Рефералка — —</b>\n\n\n{text}", 
+                kb=ref_kb
             )
 
         log_add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя {ref_sub}" if bonus_days else ''
@@ -175,12 +174,11 @@ async def yookassa_webhook(request: web.Request):
                 emoji = '<tg-emoji emoji-id="5359719332542718652">💎</tg-emoji>'
                 for_log_text = f'продление {sub_count} подписок'
 
-        await bot.send_photo(
-            chat_id=user_id,
-            photo=FSInputFile(get_random_photo()),
-            caption=f"<b>— — Оплата прошла успешно! — —</b>\n\n\n{text}", 
-            reply_markup=kb,
-            parse_mode="HTML"
+        await send_to_user(
+            bot=bot,
+            user=user_id,
+            text=f"<b>— — Оплата прошла успешно! — —</b>\n\n\n{text}", 
+            reply_markup=kb
         )
         
         await database.users.activate_sub(user_id)
