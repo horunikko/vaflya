@@ -3,6 +3,7 @@ import random
 import logging
 from functools import wraps
 
+from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
@@ -13,7 +14,7 @@ from config import config
 logger = logging.getLogger(__name__)
 
 
-def ignore_not_modified(func):
+def errors_loging(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
 
@@ -24,7 +25,7 @@ def ignore_not_modified(func):
             if "message is not modified" in str(e):
                 return
 
-            logger.error()
+        logger.exception("Произошла непредвиденная ошибка")
     
     return wrapper
 
@@ -119,10 +120,10 @@ def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = Fal
             icon_custom_emoji_id='5260399854500191689'
         )
     builder.button(
-        text="Продлить все подписки",
+        text="Массовые действия" if admin else "Продлить все подписки",
         callback_data=f"admin_mass_actionbs_{tg_id}" if admin else f"month_{x}",
         style='success',
-        icon_custom_emoji_id='5260221883940347555'
+        icon_custom_emoji_id='5258513401784573443'
     )
     builder.button(
         text="Назад",
