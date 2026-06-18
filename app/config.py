@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, HttpUrl, AnyUrl, model_validator, Field, BaseModel
 
+
 class Telegram(BaseSettings):
     token: str
 
@@ -19,6 +20,8 @@ class Telegram(BaseSettings):
     log_chat_id: int | None = None
 
     log_payment_topic_id: int | None = None
+    log_trial_topic_id: int | None = None
+    log_errors_topic_id: int | None = None
 
 
     @field_validator('admin_ids', mode='before')
@@ -90,7 +93,7 @@ class Telegram(BaseSettings):
         return str(value)
 
 
-    @field_validator('log_chat_id', 'log_payment_topic_id', mode='before')
+    @field_validator('log_chat_id', 'log_payment_topic_id', 'log_trial_topic_id', 'log_errors_topic_id', mode='before')
     def empty_to_none(cls, value):
         if not value:
             return None
