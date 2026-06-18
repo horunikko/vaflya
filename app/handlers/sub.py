@@ -1,9 +1,9 @@
 import logging
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
-from handlers.misc import choose_action, day_word, sub_action, suffix, price_list, ignore_not_modified
+from handlers.misc import choose_action, day_word, sub_action, suffix, price_list, errors_loging
 
 from service.remna import remna
 from payment.yookassa import create_payment
@@ -19,7 +19,7 @@ return_url = config.yookassa.return_url
 
 # главное меню подписок по кнопке Подписки
 @router.callback_query(F.data == 'subs')
-@ignore_not_modified
+@errors_loging
 async def subs_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
@@ -69,7 +69,7 @@ async def subs_menu(callback: CallbackQuery):
 
 # кнопка Прокси (работает только если указан tg_proxy)
 @router.callback_query(F.data == 'proxy')
-@ignore_not_modified
+@errors_loging
 async def proxy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     builder = InlineKeyboardBuilder()
@@ -95,7 +95,7 @@ async def proxy(callback: CallbackQuery):
 
 # кнопка Мои подписки
 @router.callback_query(F.data == 'get_subs')
-@ignore_not_modified
+@errors_loging
 async def get_subs(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     subs_list = await remna.user_stats(tg_id=tg_id)
@@ -130,7 +130,7 @@ async def get_subs(callback: CallbackQuery):
 
 # кнопка управления выбранной подпиской
 @router.callback_query(F.data.startswith("sub_action_"))
-@ignore_not_modified
+@errors_loging
 async def sub_control(callback: CallbackQuery):
     uuid = callback.data.removeprefix('sub_action_')
     caption = await remna.user_stats(uuid=uuid)
@@ -146,7 +146,7 @@ async def sub_control(callback: CallbackQuery):
 
 # кнопка управления устройствами
 @router.callback_query(F.data.startswith("device_"))
-@ignore_not_modified
+@errors_loging
 async def device_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('device_')
@@ -176,7 +176,7 @@ async def device_control(callback: CallbackQuery):
 
 # кнопка Сбросить устройства
 @router.callback_query(F.data.startswith("delete_device_"))
-@ignore_not_modified
+@errors_loging
 async def delete_device(callback: CallbackQuery):
     uuid = callback.data.removeprefix('delete_device_')
     await remna.delete_devices(uuid=uuid)
@@ -200,7 +200,7 @@ async def delete_device(callback: CallbackQuery):
 
 # кнопка Купить подписку. выполняется если у клиента уже есть подписка
 @router.callback_query(F.data == "is_buy")
-@ignore_not_modified
+@errors_loging
 async def is_buy(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
 
@@ -261,7 +261,7 @@ def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
 
 # продление или покупка подписки
 @router.callback_query(F.data.startswith("month_"))
-@ignore_not_modified
+@errors_loging
 async def renewal_month(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('month_')
@@ -279,7 +279,7 @@ async def renewal_month(callback: CallbackQuery):
 
 # предварительное соглашение с пользователем перед оплатой
 @router.callback_query(F.data.startswith('agreement_'))
-@ignore_not_modified
+@errors_loging
 async def buy_month(callback: CallbackQuery):
     full = callback.data.removeprefix('agreement_')
 
@@ -352,7 +352,7 @@ async def buy_month(callback: CallbackQuery):
 
 # создание платежа
 @router.callback_query(F.data.startswith('upay_'))
-@ignore_not_modified
+@errors_loging
 async def upay(callback: CallbackQuery, bot_info):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -411,7 +411,7 @@ async def upay(callback: CallbackQuery, bot_info):
 
 # кнопка Пробный период. Спрашивается, уверен ли пользователь
 @router.callback_query(F.data == 'AYS') # are you sure (дофига англичанин, да)
-@ignore_not_modified
+@errors_loging
 async def ays(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     user_has_sub = await remna.has_user_sub(tg_id=tg_id)
@@ -445,8 +445,8 @@ async def ays(callback: CallbackQuery):
 
 # выдача пробной подписки
 @router.callback_query(F.data == 'test_period')
-@ignore_not_modified
-async def test_period(callback: CallbackQuery):
+@errors_loging
+async def test_period(callback: CallbackQuery, bot: Bot):
     tg_id = str(callback.from_user.id)
     username = callback.from_user.username if callback.from_user.username else tg_id
     sub = await remna.create_user(
@@ -476,4 +476,17 @@ async def test_period(callback: CallbackQuery):
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
+    a_link = f'<a href="tg://user?id={username}">' if username.isdigit() else f'<a href="tg://resolve?domain={username}">'
+    emoji = '<tg-emoji emoji-id="5258258882022612173">⌛️</tg-emoji>'
+
+    log_text = '<b>— — Пробный период — —</b>\n\n\n'\
+        f'{emoji} Пользователь {a_link}<b>{username}</b></a> активировал пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)}!'
+    
+    if config.telegram.log_chat_id:
+            await bot.send_message(
+                chat_id=config.telegram.log_chat_id,
+                message_thread_id=config.telegram.log_trial_topic_id,
+                text=log_text,
+                parse_mode='HTML'
+            )
     logger.info(f"Пробная подписка на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} успешно выдана пользователю {username}")
