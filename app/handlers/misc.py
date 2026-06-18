@@ -4,9 +4,9 @@ import logging
 from functools import wraps
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, FSInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from config import config
 
@@ -134,6 +134,24 @@ def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = Fal
         second = 2
 
     return builder.adjust(first, second, 1, 1).as_markup()
+
+
+async def send_to_user(bot: Bot, user: int | str, text: str, kb: InlineKeyboardMarkup):
+    """Функция отправки юзеру сообщения по его айди, тексту и клавиатуре"""
+    try:
+        await bot.send_photo(
+            chat_id=str(user),
+            photo=FSInputFile(get_random_photo()),
+            caption=text,
+            reply_markup=kb,
+            parse_mode='HTML'
+        )
+
+    except TelegramForbiddenError:
+        logger.info(f"Пользователь {user} заблокировал бота")
+
+    except Exception:
+        logger.exception(f"Непредвиденная ошибка при отправке сообщения пользователю {user}")
 
 
 def day_word(days: int, iskl: bool | None = None) -> str:
