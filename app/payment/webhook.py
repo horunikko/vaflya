@@ -96,6 +96,7 @@ async def yookassa_webhook(request: web.Request):
         logger.info(f"Успешный платёж {payment_id} от пользователя {username}")
 
         bonus_days = 0
+        sub_count = 1
 
         user = await database.users.get_user(user_id)
         referral_from = int(user["referral_from"]) if user["referral_from"] else None
@@ -145,7 +146,6 @@ async def yookassa_webhook(request: web.Request):
         else:
             uuids = []
             one = True
-            sub_count = 1
             emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
             if uuid.isdigit():
@@ -189,8 +189,8 @@ async def yookassa_webhook(request: web.Request):
 
         log_text = '<b>— — Новая покупка — —</b>\n\n'\
         f'{emoji} Пользователь {a_link}<b>{username}</b></a> оплатил {for_log_text} на {month} месяц{suffix[month]}{add_text}!\n\n'\
-        f'<tg-emoji emoji-id="5258336354642697821">⚡️</tg-emoji> Сумма оплаты: {amount}\n'\
-        f'<tg-emoji emoji-id="5357069174512303778">✅</tg-emoji> Сумма с учётом комиссии: {income_amount}'
+        f'<tg-emoji emoji-id="5258336354642697821">⚡️</tg-emoji> Сумма оплаты: {amount} руб.\n'\
+        f'<tg-emoji emoji-id="5357069174512303778">✅</tg-emoji> Сумма с учётом комиссии: {income_amount} руб.'
 
         if config.telegram.log_chat_id:
             await bot.send_message(
