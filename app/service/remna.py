@@ -194,6 +194,19 @@ class Remnawave:
         return user.username
 
 
+    async def delete_user(self, uuid: str) -> str:
+        """Удаление сабки пользователя"""
+        user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
+        await self.sdk.users.delete_user(uuid)
+        return user.telegram_id, user.username
+
+
+    async def disable_user(self, uuid: str) -> str:
+        """Отключение сабки пользователя"""
+        user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
+        await self.sdk.users.disable_user(uuid)
+        return user.telegram_id, user.username
+
 remna = Remnawave(
     token=config.remnawave.token,
     panel_url=config.remnawave.panel_url,
