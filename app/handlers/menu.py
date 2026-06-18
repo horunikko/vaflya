@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.formatting import TextMention, Text
 
-from handlers.misc import inline_start, day_word, get_random_photo, ignore_not_modified
+from handlers.misc import inline_start, day_word, get_random_photo, errors_loging
 from service.remna import remna
 
 from database.db import database
@@ -46,9 +46,11 @@ async def push(bot: Bot) -> None:
 
                 except TelegramForbiddenError:
                     logger.info(f"Пользователь {user} заблокировал бота")
+                    continue
 
                 except Exception:
                     logger.exception(f"Непредвиденная ошибка")
+                    continue
 
                 await asyncio.sleep(0.05)
             
@@ -57,6 +59,7 @@ async def push(bot: Bot) -> None:
 
 # менюшка командная
 @router.message(CommandStart())
+@errors_loging
 async def get_start(message: Message, command: CommandObject, bot_info):
     ref_code = command.args
     tg_id = message.from_user.id
@@ -126,7 +129,7 @@ async def get_start(message: Message, command: CommandObject, bot_info):
 
 # менюшка. для вызова из под кнопок "меню" и "назад"
 @router.callback_query(F.data == 'menu')
-@ignore_not_modified
+@errors_loging
 async def cb_menu(callback: CallbackQuery, bot_info):
     tg_id = callback.from_user.id
     has_payed_sub = None
