@@ -34,11 +34,11 @@ async def create_simple_receipt(month: int, user_id: str, sub_count: int = 1):
     for att in range(1, 4):
         try:
             result = await client.income().create(
-                name=f"Оплата {add_text} на {month} месяц{suffix[str(month)]}. ID пользователя: {user}",
+                name=f"Оплата {add_text} на {month} месяц{suffix[str(month)]}. ID пользователя: {user_id}",
                 amount=int(price_list[str(month)]) * sub_count,
                 quantity=1
             )
-            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user}")
+            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user_id}")
             return result["approvedReceiptUuid"]
 
         except UnauthorizedException:
@@ -49,7 +49,7 @@ async def create_simple_receipt(month: int, user_id: str, sub_count: int = 1):
             logger.error("Неправильный username или пароль у прокси")
 
         except httpx.ReadTimeout:
-            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user}")
+            logger.info(f"Удачное формирование чека на сумму {int(price_list[str(month)]) * sub_count}. ID пользователя: {user_id}")
             break
         
         except Exception:
