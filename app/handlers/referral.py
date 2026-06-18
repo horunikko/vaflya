@@ -4,7 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery
 
 from config import config
-from handlers.misc import day_word, ignore_not_modified
+from handlers.misc import day_word, errors_loging
 from database.db import database
 
 
@@ -14,7 +14,7 @@ ref_bonus_days = config.subscription.ref_bonus_days
 
 # Основное меню реферальной системы
 @router.callback_query(F.data == 'ref_system')
-@ignore_not_modified
+@errors_loging
 async def proxy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     builder = InlineKeyboardBuilder()
@@ -48,7 +48,7 @@ async def proxy(callback: CallbackQuery):
 
 # мануал по реферальной системе
 @router.callback_query(F.data == 'ref_manual')
-@ignore_not_modified
+@errors_loging
 async def ref_manual(callback: CallbackQuery):
     await callback.answer(cache_time=1)
 
@@ -79,7 +79,7 @@ async def ref_manual(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == 'ref_stats')
-@ignore_not_modified
+@errors_loging
 async def ref_stats(callback: CallbackQuery, bot_info):
     await callback.answer(cache_time=1)
     user = await database.users.get_user(callback.from_user.id)

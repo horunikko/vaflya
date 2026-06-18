@@ -7,7 +7,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import config
-from handlers.misc import instruction, ignore_not_modified, read_file
+from handlers.misc import instruction, errors_loging, read_file
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -92,7 +92,7 @@ manual_kb = create_manual_kb(instruction)
 
 # кнопка Информация в главном меню
 @router.callback_query(F.data == 'info_menu')
-@ignore_not_modified
+@errors_loging
 async def info_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -104,7 +104,7 @@ async def info_menu(callback: CallbackQuery):
 
 # кнопка Инструкция
 @router.callback_query(F.data == 'manual')
-@ignore_not_modified
+@errors_loging
 async def manual(callback: CallbackQuery):
     for _ in range(3):
         try:
@@ -121,7 +121,7 @@ async def manual(callback: CallbackQuery):
 
 # сама по себе инструкция
 @router.callback_query(F.data.startswith('manual_'))
-@ignore_not_modified
+@errors_loging
 async def manual_android(callback: CallbackQuery):
     device = callback.data.removeprefix('manual_')
 
@@ -148,7 +148,7 @@ async def manual_android(callback: CallbackQuery):
 
 # кнопка О тарифе
 @router.callback_query(F.data == 'info')
-@ignore_not_modified
+@errors_loging
 async def info(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.button(
