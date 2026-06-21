@@ -178,7 +178,7 @@ async def yookassa_webhook(request: web.Request):
             bot=bot,
             user=user_id,
             text=f"<b>— — Оплата прошла успешно! — —</b>\n\n\n{text}", 
-            reply_markup=kb
+            kb=kb
         )
         
         await database.users.activate_sub(user_id)
