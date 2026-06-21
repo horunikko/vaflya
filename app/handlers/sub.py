@@ -24,7 +24,6 @@ async def subs_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
     res = await remna.has_user_sub(tg_id=tg_id)
-    x = 1
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -33,21 +32,22 @@ async def subs_menu(callback: CallbackQuery):
         style='success', 
         icon_custom_emoji_id='5258362837411045098'
     )
-    builder.button(
-        text='Мои подписки', 
-        callback_data='get_subs', 
-        style='success', 
-        icon_custom_emoji_id='5258513401784573443'
-    )
-    builder.button(
-        text='Пробный период', 
-        callback_data='AYS',
-        style='primary', 
-        icon_custom_emoji_id='5199457120428249992'
-    )
+    if res:
+        builder.button(
+            text='Мои подписки', 
+            callback_data='get_subs', 
+            style='primary',
+            icon_custom_emoji_id='5258513401784573443'
+        )
+    else:
+        builder.button(
+            text='Пробный период', 
+            callback_data='AYS',
+            style='primary', 
+            icon_custom_emoji_id='5199457120428249992'
+        )
 
     if config.telegram.proxy:
-        x = 2
         builder.button(
             text='ТГ Прокси', 
             callback_data='proxy', 
@@ -63,7 +63,7 @@ async def subs_menu(callback: CallbackQuery):
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=builder.adjust(2, x).as_markup()
+        reply_markup=builder.adjust(1).as_markup()
     )
 
 
