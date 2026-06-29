@@ -205,16 +205,16 @@ async def is_buy(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text='Купить новую', 
-        callback_data='month_', 
-        style='success', 
-        icon_custom_emoji_id='5258108352008823107'
-    )
-    builder.button(
         text='Мои подписки', 
         callback_data='get_subs',
         style='primary', 
         icon_custom_emoji_id='5226513232549664618'
+    )
+    builder.button(
+        text='Купить новую', 
+        callback_data='month_', 
+        style='primary', 
+        icon_custom_emoji_id='5258108352008823107'
     )
     builder.button(
         text='Назад', 
@@ -224,7 +224,7 @@ async def is_buy(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
         caption='<b>— — Подписки — —</b>\n\n\n'
-        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> У вас уже есть активные подписки. Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке <b>«Мои подписки»</b>',
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> <b>У вас УЖЕ ЕСТЬ активные подписки!</b> Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке <b>«Мои подписки»</b>',
         reply_markup=builder.adjust(1).as_markup(),
         parse_mode='HTML'
     )
