@@ -38,7 +38,7 @@ class Database:
             await db.execute("""
             CREATE TABLE IF NOT EXISTS notifications (
                 uuid TEXT PRIMARY KEY,
-                notify_days INTEGER DEFAULT 0
+                notify_days INTEGER
             )
             """)
             await db.commit()
