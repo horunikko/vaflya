@@ -150,6 +150,12 @@ async def send_to_user(bot: Bot, user: int | str, text: str, kb: InlineKeyboardM
     except TelegramForbiddenError:
         logger.info(f"Пользователь {user} заблокировал бота")
 
+    except TelegramBadRequest as e:
+        if 'chat not found' in str(e):
+            logger.info(f"Чат с айди {user} не существует!")
+        else:
+            logger.exception(f"Непредвиденная ошибка при отправке сообщения пользователю {user}")
+
     except Exception:
         logger.exception(f"Непредвиденная ошибка при отправке сообщения пользователю {user}")
 
