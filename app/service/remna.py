@@ -24,7 +24,7 @@ class Remnawave:
         """Возвращает список из telegram id пользователей, чья подписка истекает через {days} дней"""
         start = 0
         if end_notify:
-            notify_days = notify_days + [0]
+            notify_days = sorted(notify_days + [0])
 
         result: dict[int, list[str]] = {day: [] for day in notify_days}
         now = datetime.now(timezone.utc)
@@ -42,13 +42,12 @@ class Remnawave:
                 final_day = None
                 
                 for day in notify_days:
-                    delta = now + timedelta(days=day)
-                    if delta >= user.expire_at and (sub_days is None or day < sub_days):
-                        result[day].append(user.telegram_id)
-                        sub_days = day
+                    if now + timedelta(days=day) >= user.expire_at:
                         final_day = day
+                        break
                 
-                if final_day is not None:
+                if final_day is not None and (sub_days is None or final_day < sub_days):
+                    result[day].append(user.telegram_id)
                     await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=final_day)
 
             start += 25
