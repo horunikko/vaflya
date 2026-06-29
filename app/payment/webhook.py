@@ -164,6 +164,8 @@ async def yookassa_webhook(request: web.Request):
                     traffic=config.subscription.base_traffic,
                     device_limit=config.subscription.base_devices
                 )
+                await database.notifications.create_or_update(uuid=uuid, notify_days=None)
+                
                 text = f"Подписка {sub_name} продлена на {month} месяц{suffix[month]}!"
                 logger.info(text)
             
