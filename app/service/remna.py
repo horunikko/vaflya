@@ -20,12 +20,14 @@ class Remnawave:
         self.sdk = RemnawaveSDK(base_url=self.panel_url, token=self.token)
 
 
-    async def expire_day(self, days: int) -> list[str]:
+    async def expire_day(self, notify_days: list[int], end_notify: bool = False) -> list[str]:
         """Возвращает список из telegram id пользователей, чья подписка истекает через {days} дней"""
         start = 0
-        users = []
-        date = datetime.now(timezone.utc)
-        delta = date + timedelta(days=days)
+        if end_notify:
+            notify_days = notify_days + [0]
+
+        result: dict[int, list[str]] = {day: [] for day in notify_days}
+        now = datetime.now(timezone.utc)
         
         while True:
             response = await self.sdk.users.get_all_users(size=25, start=start)
@@ -33,23 +35,25 @@ class Remnawave:
                 break
             
             for user in response.users:
-                if user.expire_at > date:
+                if not user.telegram_id:
+                    continue
 
-                    sub_days = await database.notifications.get_days(str(user.uuid))
+                sub_days = await database.notifications.get_days(str(user.uuid))
+                final_day = None
+                
+                for day in notify_days:
+                    delta = now + timedelta(days=day)
+                    if delta >= user.expire_at and (sub_days is None or day < sub_days):
+                        result[day].append(user.telegram_id)
+                        sub_days = day
+                        final_day = day
+                
+                if final_day is not None:
+                    await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=final_day)
 
-                    # создание записи в бд при её отсутствии
-                    if sub_days is None:
-                        await database.notifications.create_or_update(str(user.uuid))
-                        sub_days = 0
-                        
-                    # а вот тут уже идёт основная проверка
-                    if delta >= user.expire_at and (days < sub_days or sub_days == 0):
-                        if user.telegram_id:
-                            users.append(user.telegram_id)
-                        await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=days)
             start += 25
         
-        return users
+        return result
 
 
     async def text_user_stats(self, user, hwid) -> str:
@@ -133,7 +137,6 @@ class Remnawave:
     async def create_user(self, username: str, tg_id: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
         """Создаёт подписку и возвращает её url"""
         end_date = datetime.now(timezone.utc) + timedelta(days=30*month) + timedelta(days=days)
-        squad_uuid = 'ba78e6e0-a2db-49d4-9c0d-2320d9a8aad4'
         res_user = username
         i = 1
 
@@ -158,7 +161,7 @@ class Remnawave:
                 telegram_id=str(tg_id),
                 expire_at=end_date,
                 description=description,
-                active_internal_squads=[str(squad_uuid)],
+                active_internal_squads=[config.subscription.base_squad_uuid],
                 traffic_limit_strategy="MONTH",
                 traffic_limit_bytes=traffic,
                 hwid_device_limit=device_limit

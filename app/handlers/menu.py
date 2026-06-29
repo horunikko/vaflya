@@ -33,12 +33,16 @@ async def push(bot: Bot) -> None:
 
     await asyncio.sleep(600)
     while True:
-        for day in config.telegram.notify_days:
+        grouped_users = await remna.expire_day(notify_days=config.telegram.notify_days, end_notify=config.telegram.sub_end_notify)
+        for day, users in grouped_users.items():
 
-            text = '<b>— — Уведомление — —</b>\n\n\n'\
-                    f'Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!'
+            if day == 0:
+                text = '<b>— — Уведомление — —</b>\n\n\n'\
+                        f'<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Ваша подписка истекла! Для продолжения пользования сервисом вам необходимо продлить подписку!'
+            else:
+                text = '<b>— — Уведомление — —</b>\n\n\n'\
+                        f'<tg-emoji emoji-id="5258258882022612173">⏳</tg-emoji> Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!'
 
-            users = await remna.expire_day(days=day)
             for user in users:
                 await send_to_user(bot=bot, user=user, text=text, kb=kb)
                 await asyncio.sleep(0.05)
