@@ -86,7 +86,7 @@ class Telegram(BaseSettings):
             else:
                 result.add(int(part))
 
-        return sorted(result, reverse=True)
+        return result
 
 
     @field_validator('support_link', 'channel_link', 'privacy_url', 'terms_url', mode='after')
