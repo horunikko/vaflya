@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, HttpUrl, AnyUrl, model_validator, Field, BaseModel
 
@@ -13,6 +15,7 @@ class Telegram(BaseSettings):
     proxy: AnyUrl | None = None
 
     notify_days: list[int] | None = None
+    sub_end_notify: bool = False
 
     privacy_url: AnyUrl | None = None
     terms_url: AnyUrl | None = None
@@ -83,7 +86,7 @@ class Telegram(BaseSettings):
             else:
                 result.add(int(part))
 
-        return sorted(result)
+        return sorted(result, reverse=True)
 
 
     @field_validator('support_link', 'channel_link', 'privacy_url', 'terms_url', mode='after')
@@ -93,7 +96,7 @@ class Telegram(BaseSettings):
         return str(value)
 
 
-    @field_validator('log_chat_id', 'log_payment_topic_id', 'log_trial_topic_id', 'log_errors_topic_id', mode='before')
+    @field_validator('log_chat_id', 'log_payment_topic_id', 'log_trial_topic_id', 'log_errors_topic_id', 'sub_end_notify', mode='before')
     def empty_to_none(cls, value):
         if not value:
             return None
@@ -138,6 +141,9 @@ class Remnawave(BaseSettings):
 
 
 class Subscription(BaseSettings):
+    base_squad_uuid: str
+    trial_squad_uuid: str | None = None
+
     base_traffic: int = 0
     trial_traffic: int | None = None
 
@@ -154,11 +160,20 @@ class Subscription(BaseSettings):
         return 0 if not value or value.strip() == "" else value
 
 
-    @field_validator('trial_traffic', 'trial_devices', mode='before')
+    @field_validator('trial_traffic', 'trial_devices', 'trial_squad_uuid', mode='before')
     def empty_to_none(cls, value: str | None):
         if value != "0" and not value:
             return None
         return value
+
+
+    @field_validator('base_squad_uuid', mode='before')
+    def is_uuid(value: str):
+        try:
+            UUID(value)
+            return value
+        except (ValueError, TypeError):
+            return False
 
 
     @model_validator(mode='after')
@@ -168,6 +183,9 @@ class Subscription(BaseSettings):
 
         if self.trial_devices is None:
             self.trial_devices = self.base_devices
+
+        if self.trial_squad_uuid is None:
+            self.trial_squad_uuid = self.base_squad_uuid
 
         return self
 
