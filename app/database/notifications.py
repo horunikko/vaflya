@@ -6,7 +6,7 @@ class Notification():
         self.database = database
 
     
-    async def create_or_update(self, uuid: str, notify_days: int = 0) -> None:
+    async def create_or_update(self, uuid: str, notify_days: int | None = None) -> None:
         """Функция создания/обновления уведомлений об окончании подписки"""
         async with aiosqlite.connect(self.database.path) as db:
 
