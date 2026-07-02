@@ -401,6 +401,11 @@ async def upay(callback: CallbackQuery, bot_info):
         icon_custom_emoji_id='5258204546391351475',
         style="success"
     )
+    builder.button(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
 
     await callback.message.edit_caption(
         caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", 
