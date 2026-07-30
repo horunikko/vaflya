@@ -28,7 +28,7 @@ def push_kb(uuid):
         icon_custom_emoji_id='5258419835922030550',
         style='success'
     )
-    kb_builder.button(
+    builder.button(
         text='В меню', 
         callback_data='menu', 
         icon_custom_emoji_id='5257963315258204021'
