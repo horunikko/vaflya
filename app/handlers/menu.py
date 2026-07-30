@@ -19,32 +19,40 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def push(bot: Bot) -> None:
-    """Каждый час пытается выслать уведомление пользователю об окончании подписки"""
-
+def push_kb(uuid):
+    """Клавиатура для уведомлений"""
     builder = InlineKeyboardBuilder()
     builder.button(
-        text='Мои подписки', 
-        callback_data='get_subs', 
-        icon_custom_emoji_id='5226513232549664618',
+        text='Продлить подписку',
+        callback_data=f'month_{uuid}',
+        icon_custom_emoji_id='5258419835922030550',
         style='success'
     )
-    kb = builder.adjust(1).as_markup()
+    kb_builder.button(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
+    return builder.adjust(1).as_markup()
 
-    await asyncio.sleep(600)
+
+async def push(bot: Bot) -> None:
+    """Каждый час пытается выслать уведомление пользователю об окончании подписки"""
+    await asyncio.sleep(100)
     while True:
         grouped_users = await remna.expire_day(notify_days=config.telegram.notify_days, end_notify=config.telegram.sub_end_notify)
-        for day, users in grouped_users.items():
 
-            if day == 0:
-                text = '<b>— — Уведомление — —</b>\n\n\n'\
-                        f'<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Ваша подписка истекла! Для продолжения пользования сервисом вам необходимо продлить подписку!'
-            else:
-                text = '<b>— — Уведомление — —</b>\n\n\n'\
-                        f'<tg-emoji emoji-id="5258258882022612173">⏳</tg-emoji> Ваша подписка заканчивается через {day} {day_word(day)}! Не забудьте продлить её!'
+        for day, user_info in grouped_users.items():
+            for user in user_info:
 
-            for user in users:
-                await send_to_user(bot=bot, user=user, text=text, kb=kb)
+                if day == 0:
+                    text = f'<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Подписка {user["username"]} истекла!\n\nДля продолжения пользования сервисом продлите подписку!'
+                else:
+                    text = f'<tg-emoji emoji-id="5258258882022612173">⏳</tg-emoji> Подписка {user["username"]} истекает через {day} {day_word(day)}! Не забудьте продлить её!'
+
+                await send_to_user(bot=bot, user=user["user_id"], text=text, kb=push_kb(user["user_uuid"]))
+
+                logger.info(f'Пользователь {user["user_id"]} уведомлён')
                 await asyncio.sleep(0.05)
             
         await asyncio.sleep(3600)
@@ -61,49 +69,33 @@ async def get_start(message: Message, command: CommandObject, bot_info, state: F
     ref_from = None
     has_payed_sub = None
 
-    caption = f'<b>— — Вас приветствует {bot_info.first_name} ! — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>'
+    caption = f'<b><tg-emoji emoji-id="5258501105293205250">👏</tg-emoji> Вас приветствует {bot_info.first_name} !</b>\n\n<i>Выберите действие кнопками ниже</i>'
 
     if ref_code:
-        if not config.subscription.ref_bonus_days:
-            await message.answer(
-                text="<b>— — Рефералка — —</b>\n\n\n"
-                '<tg-emoji emoji-id="5260412365739925015">🚫</tg-emoji> '
-                "Реферальная система отключена.",
-                parse_mode='HTML'
-            )
         if await database.users.has_payed_sub(tg_id):
             await message.answer(
-                text="<b>— — Рефералка — —</b>\n\n\n"
-                '<tg-emoji emoji-id="5260412365739925015">🚫</tg-emoji> '
-                "У вас уже есть платная подписка, вы не можете использовать чужие реферальный ссылки, но можете поделиться своей для получения бонуса!",
+                text='<tg-emoji emoji-id="5260412365739925015">🚫</tg-emoji> '
+                "У вас уже есть платная подписка, для получения бонуса вы можете делиться своей ссылкой!",
                 parse_mode='HTML'
             )
         else:
             ref_from: int | None = await database.users.referral_from_by_ref_code(ref_code)
-            if not ref_from:
+            if not ref_from or ref_from == tg_id:
                 await message.answer(
-                    text="<b>— — Рефералка — —</b>\n\n\n"
-                    '<tg-emoji emoji-id="5275969776668134187">❗️</tg-emoji> '
-                    "Не найден реферальный код. Убедитесь в правильности реферальной ссылки",
-                    parse_mode='HTML'
-                )
-            elif ref_from == tg_id:
-                await message.answer(
-                    text="<b>— — Рефералка — —</b>\n\n\n"
-                    '<tg-emoji emoji-id="5258362429389152256">❌</tg-emoji> '
-                    "Вы не можете использовать свою рефералку, не хитрите!",
+                    text='<tg-emoji emoji-id="5275969776668134187">❗️</tg-emoji> '
+                    "Неверный реферальный код\n\nУбедитесь в правильности реферальной ссылки",
                     parse_mode='HTML'
                 )
                 ref_from = None
             else:
                 user = await database.users.get_username(ref_from) or ref_from
                 await message.answer(
-                    text="<b>— — Рефералка — —</b>\n\n\n"
-                    '<tg-emoji emoji-id="5260726538302660868">✅</tg-emoji> '
-                    f"Реферальная ссылка от пользователя {user} активирована! После оплаты вы получите дополнительных {config.subscription.ref_bonus_days} {day_word(config.subscription.ref_bonus_days)}!",
+                    text='<tg-emoji emoji-id="5260726538302660868">✅</tg-emoji> '
+                    f"Реферальная ссылка пользователя {user} активирована!\n\n"
+                    f"После оплаты вы получите дополнительных {config.subscription.ref_bonus_days} {day_word(config.subscription.ref_bonus_days)}!",
                     parse_mode='HTML'
                 )
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(1.5)
 
     if not await database.users.get_user(tg_id) and await remna.has_user_sub(tg_id):
         has_payed_sub = 1
@@ -140,7 +132,7 @@ async def cb_menu(callback: CallbackQuery, bot_info, state: FSMContext):
         has_user_sub=has_payed_sub
     )
 
-    caption = f'<b>— — Вас приветствует {bot_info.first_name} ! — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>'
+    caption = f'<b><tg-emoji emoji-id="5258501105293205250">👏</tg-emoji> Вас приветствует {bot_info.first_name} !</b>\n\n<i>Выберите действие кнопками ниже</i>'
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
