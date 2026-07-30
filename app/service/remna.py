@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import datetime, timedelta, timezone
 from remnawave import RemnawaveSDK
 from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto
@@ -7,6 +8,8 @@ from remnawave.exceptions.general import NotFoundError
 from config import config
 from database.db import database
 
+from pydantic import BaseModel
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +26,9 @@ class Remnawave:
     async def expire_day(self, notify_days: list[int], end_notify: bool = False) -> list[str]:
         """Возвращает список из telegram id пользователей, чья подписка истекает через {days} дней"""
         start = 0
-        if end_notify:
-            notify_days = sorted(notify_days + [0])
+        notify_days = sorted(notify_days + [0]) if end_notify else sorted(notify_days)
 
-        result: dict[int, list[str]] = {day: [] for day in notify_days}
+        result: dict[int, list[dict[str, str]]] = {day: [] for day in notify_days}
         now = datetime.now(timezone.utc)
         
         while True:
@@ -47,7 +49,7 @@ class Remnawave:
                         break
                 
                 if final_day is not None and (sub_days is None or final_day < sub_days):
-                    result[day].append(user.telegram_id)
+                    result[day].append({"user_id": user.telegram_id, "username": user.username, "user_uuid": user.uuid})
                     await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=final_day)
 
             start += 25
@@ -55,7 +57,7 @@ class Remnawave:
         return result
 
 
-    async def text_user_stats(self, user, hwid) -> str:
+    async def _text_user_stats(self, user) -> str:
         """Формирует и возвращает текст с информацией о подписке по его uuid и hwid"""
         # проверка глобального hwid лимита
         if self.hwid_limit is None:
@@ -68,6 +70,8 @@ class Remnawave:
 
         # лимит самого пользователя
         hwid_device = user.hwid_device_limit
+
+        hwid = await self.sdk.hwid.get_hwid_user(uuid=str(user.uuid))
         
         if hwid_device == 0:
             hwid_device = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
@@ -88,27 +92,26 @@ class Remnawave:
                 "<blockquote expandable>"
                 f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> (<i>кликабельно</i>)\n\n'
                 f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'
-                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{len(hwid.devices)}</b>/{hwid_device}\n\n'
+                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{hwid.total}</b>/{hwid_device}\n\n'
                 f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>\n'
                 "</blockquote>"
                 )
 
 
-    async def user_stats(self, tg_id: str | int | None = None, uuid: str | None =None) -> str | list[str] | None:
+    async def user_stats(self, tg_id: str | int | None = None, uuid: str | None = None) -> str | list[str] | None:
         """Функция получения статистики по tg_id или uuid.
         Возвращает список из инфы о всех подписках по тг айди или инфу о подписке по uuid"""
         if uuid:
-            user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
-            hwid = await self.sdk.hwid.get_hwid_user(uuid=uuid)
-            return await self.text_user_stats(user, hwid)
+            users = [await self.sdk.users.get_user_by_uuid(uuid=uuid)]
+
         if tg_id:
-            subs = []
             users = await self.sdk.users.get_users_by_telegram_id(str(tg_id))
-            for user in users:
-                hwid = await self.sdk.hwid.get_hwid_user(uuid=str(user.uuid))
-                subs.append(await self.text_user_stats(user, hwid))
-            return subs
-        return None
+
+        res = []
+        for user in users:
+            res.append(await self._text_user_stats(user))
+        
+        return res
 
 
     async def has_user_sub(self, tg_id: str | int) -> bool:
@@ -129,8 +132,11 @@ class Remnawave:
 
     async def delete_devices(self, uuid: str) -> None:
         """Сбрасывает все устройства для подписки"""
-        request = DeleteUserAllHwidDeviceRequestDto(user_uuid=uuid)
-        await self.sdk.hwid.delete_all_hwid_user(body=request)
+        await self.sdk.hwid.delete_all_hwid_user(
+            body=DeleteUserAllHwidDeviceRequestDto(
+                user_uuid=uuid
+            )
+        )
 
 
     async def create_user(self, username: str, tg_id: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
