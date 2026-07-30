@@ -1,6 +1,6 @@
-aiogram==3.28.1
-remnawave==2.7.1
-httpx[socks]==0.27.2
-aiohttp==3.13.5
-aiosqlite==0.22.1
+aiogram
+remnawave==2.8.0
+httpx[socks]
+aiohttp
+aiosqlite
 pydantic_settings
