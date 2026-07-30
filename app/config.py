@@ -222,8 +222,18 @@ class Yookassa(BaseSettings):
 
 class Price(BaseSettings):
     one: int = Field(ge=10)
-    three: int = Field(ge=10)
-    twelve: int = Field(ge=10)
+    three: int | None = Field(default=None, ge=10)
+    six: int | None = Field(default=None, ge=10)
+    twelve: int | None = Field(default=None, ge=10)
+    twenty_four: int | None = Field(default=None, ge=10)
+
+
+    @field_validator('three', 'six', 'twelve', 'twenty_four', mode='before')
+    def empty_to_none(cls, value):
+        if not value:
+            return None
+        return value
+
 
     model_config = SettingsConfigDict(
         env_prefix='PRICE_',
