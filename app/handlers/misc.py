@@ -47,12 +47,13 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
             style='primary',
             icon_custom_emoji_id='5258165702707125574'
         )
-    builder.button(
-        text='Информация',
-        callback_data='info_menu',
-        style='danger',
-        icon_custom_emoji_id='5258503720928288433'
-    )
+    if info_kb:
+        builder.button(
+            text='Информация',
+            callback_data='info_menu',
+            style='danger',
+            icon_custom_emoji_id='5258503720928288433'
+        )
     if user_id in config.telegram.admin_ids:
         builder.button(
             text='Админ панель',
@@ -205,21 +206,76 @@ def read_file(file: str) -> str | None:
         return None
 
 
+def if_info(info_text) -> InlineKeyboardMarkup | None:
+    """Создание клавиатуры для главного меню"""
+    kb_builder = InlineKeyboardBuilder()
+
+    if any(instruction.values()):
+        kb_builder.button(
+            text='Как подключить?',
+            callback_data='manual',
+            style='primary', 
+            icon_custom_emoji_id='5258328383183396223'
+        )
+    else:
+        logger.info("Кнопка 'Как подключить?' отключена")
+
+    if info_text:
+        kb_builder.button(
+            text='О сервисе',
+            callback_data='info', 
+            style='primary', 
+            icon_custom_emoji_id='5258503720928288433'
+        )
+    else:
+        logger.info("Кнопка 'О тарифе' отключена")
+    
+    if config.telegram.support_link:
+        kb_builder.button(
+            text='Поддержка',
+            url=config.telegram.support_link,
+            icon_custom_emoji_id='5316727448644103237',
+            style='success'
+        )
+    else:
+        logger.info("Кнопка 'Поддержка' отключена")
+    
+    if config.telegram.channel_link:
+        kb_builder.button(
+            text='ТГ канал', 
+            url=config.telegram.channel_link, 
+            icon_custom_emoji_id='5260268501515377807', 
+            style='danger'
+        )
+    else:
+        logger.info("Кнопка 'ТГ канал' отключена")
+    
+    x = len(list(kb_builder.buttons))
+
+    kb_builder.button(
+        text='В меню', 
+        callback_data='menu', 
+        icon_custom_emoji_id='5257963315258204021'
+    )
+    if not x:
+        return None
+    return kb_builder.adjust(int(x//2)).as_markup()
+
+info_text = read_file("app/texts/info.txt")
+info_kb = if_info(info_text)
+
 suffix = {
     "1": "",
     "3": "а",
-    "12": "ев"
+    "6": "ев",
+    "12": "ев",
+    "24": "а"
 }
 
 price_list = {
     "1": config.price.one,
     "3": config.price.three, 
-    "12": config.price.twelve
-}
-
-instruction = {
-    "android": read_file("app/texts/instruction_android.txt"),
-    "ios": read_file("app/texts/instruction_ios.txt"),
-    "windows": read_file("app/texts/instruction_windows.txt"),
-    "linux": read_file("app/texts/instruction_linux.txt")
+    "6": config.price.six,
+    "12": config.price.twelve,
+    "24": config.price.twenty_four
 }

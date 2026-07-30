@@ -7,56 +7,10 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import config
-from handlers.misc import instruction, errors_loging, read_file
+from handlers.misc import instruction, errors_loging, info_kb, read_file, info_text
 
 logger = logging.getLogger(__name__)
 router = Router()
-
-info_text = read_file("app/texts/info.txt")
-
-kb_builder = InlineKeyboardBuilder()
-
-if any(instruction.values()):
-    kb_builder.button(
-        text='Как подключить?',
-        callback_data='manual',
-        style='primary', 
-        icon_custom_emoji_id='5258328383183396223'
-    )
-else:
-    logger.info("Кнопка 'Как подключить?' отключена")
-if info_text:
-    kb_builder.button(
-        text='О тарифе',
-        callback_data='info', 
-        style='primary', 
-        icon_custom_emoji_id='5258503720928288433'
-    )
-else:
-    logger.info("Кнопка 'О тарифе' отключена")
-if config.telegram.support_link:
-    kb_builder.button(
-        text='Поддержка',
-        url=config.telegram.support_link,
-        icon_custom_emoji_id='5316727448644103237',
-        style='success'
-    ),
-else:
-    logger.info("Кнопка 'Поддержка' отключена")
-if config.telegram.channel_link:
-    kb_builder.button(
-        text='ТГ канал', 
-        url=config.telegram.channel_link, 
-        icon_custom_emoji_id='5260268501515377807', 
-        style='danger'
-    )
-else:
-    logger.info("Кнопка 'ТГ канал' отключена")
-kb_builder.button(
-    text='В меню', 
-    callback_data='menu', 
-    icon_custom_emoji_id='5257963315258204021'
-)
 
 
 def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
@@ -87,6 +41,13 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
 
     return builder.adjust(1).as_markup()
 
+
+instruction = {
+    "android": read_file("app/texts/instruction_android.txt"),
+    "ios": read_file("app/texts/instruction_ios.txt"),
+    "windows": read_file("app/texts/instruction_windows.txt"),
+    "linux": read_file("app/texts/instruction_linux.txt")
+}
 manual_kb = create_manual_kb(instruction)
 
 
@@ -96,9 +57,9 @@ manual_kb = create_manual_kb(instruction)
 async def info_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption='<b>— — Информация — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
+        caption='<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
-        reply_markup=kb_builder.adjust(2).as_markup()
+        reply_markup=info_kb
     )
 
 
@@ -106,17 +67,12 @@ async def info_menu(callback: CallbackQuery):
 @router.callback_query(F.data == 'manual')
 @errors_loging
 async def manual(callback: CallbackQuery):
-    for _ in range(3):
-        try:
-            await callback.answer(cache_time=1)
-            await callback.message.edit_caption(
-                caption='<b>— — Инструкция — —</b>\n\n\nВыберите ваше устройство:',
-                parse_mode='HTML',
-                reply_markup=manual_kb
-            )
-            break
-        except TelegramBadRequest:
-            pass
+        await callback.answer(cache_time=1)
+        await callback.message.edit_caption(
+            caption='<b>Выберите ваше устройство:</b>',
+            parse_mode='HTML',
+            reply_markup=manual_kb
+        )
 
 
 # сама по себе инструкция
@@ -140,7 +96,7 @@ async def manual_android(callback: CallbackQuery):
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f'<b>— — Инструкция — —</b>\n\n{instruction[device]}',
+        caption=instruction[device],
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -158,7 +114,7 @@ async def info(callback: CallbackQuery):
     )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f'<b>— — О тарифе — —</b>\n\n\n{info_text}',
+        caption=info_text,
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
