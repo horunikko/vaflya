@@ -261,8 +261,6 @@ def if_info(info_text) -> InlineKeyboardMarkup | None:
         return None
     return kb_builder.adjust(int(x//2)).as_markup()
 
-info_text = read_file("app/texts/info.txt")
-info_kb = if_info(info_text)
 
 suffix = {
     "1": "",
@@ -279,3 +277,13 @@ price_list = {
     "12": config.price.twelve,
     "24": config.price.twenty_four
 }
+
+instruction = {
+    "android": read_file("app/texts/instruction_android.txt"),
+    "ios": read_file("app/texts/instruction_ios.txt"),
+    "windows": read_file("app/texts/instruction_windows.txt"),
+    "linux": read_file("app/texts/instruction_linux.txt")
+}
+
+info_text = read_file("app/texts/info.txt")
+info_kb = if_info(info_text)

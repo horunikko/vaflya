@@ -42,12 +42,6 @@ def create_manual_kb(instruction: dict) -> InlineKeyboardMarkup:
     return builder.adjust(1).as_markup()
 
 
-instruction = {
-    "android": read_file("app/texts/instruction_android.txt"),
-    "ios": read_file("app/texts/instruction_ios.txt"),
-    "windows": read_file("app/texts/instruction_windows.txt"),
-    "linux": read_file("app/texts/instruction_linux.txt")
-}
 manual_kb = create_manual_kb(instruction)
 
 
@@ -69,7 +63,7 @@ async def info_menu(callback: CallbackQuery):
 async def manual(callback: CallbackQuery):
         await callback.answer(cache_time=1)
         await callback.message.edit_caption(
-            caption='<b>Выберите ваше устройство:</b>',
+            caption='<i>Выберите ваше устройство:</i>',
             parse_mode='HTML',
             reply_markup=manual_kb
         )
