@@ -39,8 +39,7 @@ async def proxy(callback: CallbackQuery):
     )
 
     await callback.message.edit_caption(
-        caption='<b>— — Реферальная система — —</b>\n\n\n'
-        '<i>Выберите действие кнопками ниже</i>',
+        caption='<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -67,13 +66,11 @@ async def ref_manual(callback: CallbackQuery):
     )
     
     await callback.message.edit_caption(
-        caption='<b>— — Реферальная система — —</b>\n\n\n'
-        '<tg-emoji emoji-id="5323761960829862762">✨</tg-emoji> За первую покупку каждого приглашённого вами пользователя вы и новый пользователь ' 
-        f'получите по {ref_bonus_days} {day_word(days=ref_bonus_days, iskl=True)} к вашим подпискам\n\n'
-        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Чтобы иметь возможность приглашать других людей и получать бонус вам необходимо иметь '
-        'платную подписку!\n\n'
-        '<tg-emoji emoji-id="5258073068852485953">🔗</tg-emoji> После того, как у вас появится платная подписка, вы можете скопировать свою ссылку по кнопкам <b>Реферальная система</b> → <b>Моя ссылка</b>. '
-        'В том же разделе вы сможете посмотреть статистику по приглашённым пользователям и бонусным дням',
+        caption='<tg-emoji emoji-id="5323761960829862762">✨</tg-emoji> За <b>первую</b> покупку каждого приглашённого вами пользователя <b>вы</b> и <b>новый пользователь</b> ' 
+        f'получите по <b>{ref_bonus_days} {day_word(days=ref_bonus_days, iskl=True)}</b> к вашим подпискам\n\n'
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Для получения бонуса за приглашённых людей, вам необходимо иметь платную подписку!\n\n'
+        '<tg-emoji emoji-id="5258073068852485953">🔗</tg-emoji> Свою ссылку вы можете найти по кнопке ниже.'
+        'В том же разделе есть статистика по приглашённым пользователям и бонусным дням',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -97,11 +94,10 @@ async def ref_stats(callback: CallbackQuery, bot_info):
     )
 
     await callback.message.edit_caption(
-        caption='<b>— — Рефералка — —</b>\n\n\n'
-        f'<tg-emoji emoji-id="5260730055880876557">📎</tg-emoji> Ваша реферальная ссылка: <code>{ref_url}</code> <i>(кликабельно)</i>\n\n'
+        caption=f'<tg-emoji emoji-id="5260730055880876557">📎</tg-emoji> <b>Ваша ссылка:</b> <code>{ref_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'
         f'<tg-emoji emoji-id="5258513401784573443">👤</tg-emoji> Количество приведённых вами пользователей: {ref_count}\n'
-        f'<tg-emoji emoji-id="5258108352008823107">✨</tg-emoji> Количество бонусных дней: {bonus_days}\n\n'
-        f'<tg-emoji emoji-id="5258503720928288433">❗️</tg-emoji> За каждого приведённого человека вы получите по {ref_bonus_days} {day_word(ref_bonus_days)} ко всем вашим подпискам!',
+        f'<tg-emoji emoji-id="5258108352008823107">✨</tg-emoji> Суммарное количество бонусных дней: {bonus_days}\n\n'
+        f'<i>За каждого приведённого человека вы получите по <b>{ref_bonus_days} {day_word(ref_bonus_days)}</b> ко всем вашим подпискам!</i>',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
