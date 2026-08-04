@@ -88,13 +88,13 @@ class Remnawave:
         if int(user.expire_at.strftime('%Y')) >= 2099:
             expire_time = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
 
-        return (f"{user.username} {active}</blockquote>\n"
+        return (f"{active} {user.username}\n"
                 "<blockquote expandable>"
-                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> (<i>кликабельно</i>)\n\n'
+                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'
                 f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'
-                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{hwid.total}</b>/{hwid_device}\n\n'
-                f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>\n'
-                "</blockquote>"
+                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{int(hwid.total)}</b>/{hwid_device}\n\n'
+                f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>'
+                "</blockquote>\n\n"
                 )
 
 
