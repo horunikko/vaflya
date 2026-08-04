@@ -61,7 +61,7 @@ async def subs_menu(callback: CallbackQuery):
         icon_custom_emoji_id='5257963315258204021'
     )
     await callback.message.edit_caption(
-        caption='<b>— — Подписки — —</b>\n\n\n<i>Выберите действие кнопками ниже</i>',
+        caption='<i>Выберите действие кнопками ниже</i>',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -86,8 +86,8 @@ async def proxy(callback: CallbackQuery):
         icon_custom_emoji_id='5258236805890710909'
     )
     await callback.message.edit_caption(
-        caption=f'<b>— — Прокси — —</b>\n\nСсылка на наш прокси:\n\n{config.telegram.proxy}\n\n'
-        'Прокси полностью бесплатный, вы также можете делиться им с другими людьми!',
+        caption=f'Наш прокси:\n\n{config.telegram.proxy}\n\n'
+        '<blockquote><tg-emoji emoji-id="5357069174512303778">✅</tg-emoji> Он полностью бесплатный, вы также можете делиться им с другими людьми!</blockquote>',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -99,30 +99,29 @@ async def proxy(callback: CallbackQuery):
 async def get_subs(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     subs_list = await remna.user_stats(tg_id=tg_id)
-
     if not subs_list:
-        await callback.answer(text='У вас нет подписок!', cache_time=1)
+        await callback.answer(
+            text='У вас нет подписок!',
+            cache_time=1
+        )
         return
 
-    caption = ''
-    for sub_n, sub in enumerate(subs_list):
-        caption += f"\n<blockquote>{sub_n+1}. {sub}"
-
-    subs = await remna.user_name(tg_id)
+    caption = ''.join(sub for sub in subs_list)
+    subs_uuids = await remna.user_name(tg_id)
 
     # если подписок несколько
-    if sub_n:
-        text = "Выберите подписку для управления:"
-        kb = sub_action(users=subs, tg_id=tg_id)
+    if len(subs_list) > 1:
+        text = "<i>Выберите подписку для управления:</i>"
+        kb = sub_action(users=subs_uuids, tg_id=tg_id)
 
     else:
-        text = "<i>Для продления подписки нажмите кнопку <b>«Продлить»</b></i>"
-        uuid = str(list(subs.values())[0])
+        text = "<i>Выберите действие:</i>"
+        uuid = str(list(subs_uuids.values())[0])
         kb = choose_action(uuid)
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"<b>— — Подписки — —</b>\n{caption}\n{text}",
+        caption=f"{caption}{text}",
         parse_mode='HTML',
         reply_markup=kb
     )
@@ -137,8 +136,7 @@ async def sub_control(callback: CallbackQuery):
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption="<b>— — Управление подпиской — —</b>"
-        f"\n\n<blockquote>{caption}\nВыберите действие:",
+        caption=f"{caption[0]}<i>Выберите действие:</i>",
         parse_mode='HTML',
         reply_markup=choose_action(uuid, one=False)
     )
@@ -165,9 +163,8 @@ async def device_control(callback: CallbackQuery):
     )
 
     await callback.message.edit_caption(
-        caption='<b>— — Управление устройствами — —</b>\n\n\n'
-        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Если подписка не добавляется на новом устройстве или в другом приложении, '
-        'нажмите <b>«Сбросить устройства»</b>. Это отвяжет все ранее подключённые устройства '
+        caption='Если подписка не добавляется на новом устройстве или в другом приложении, нажмите <b>«Сбросить устройства»</b>\n\n'
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Это отвяжет все ранее подключённые устройства '
         'и позволит подключить подписку снова. Текущие подключения продолжат работать до их обновления.',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
@@ -182,7 +179,6 @@ async def delete_device(callback: CallbackQuery):
     await remna.delete_devices(uuid=uuid)
 
     builder = InlineKeyboardBuilder()
-
     builder.button(
         text='В меню', 
         callback_data='menu', 
@@ -191,8 +187,8 @@ async def delete_device(callback: CallbackQuery):
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f'<b>— — Сброс устройств — —</b>\n\n\n'
-        '<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Устройства успешно сброшены! Можете использовать подписку на других устройствах!',
+        caption='Устройства успешно сброшены\n\n'
+        '<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Можете использовать подписку на других устройствах!',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -223,8 +219,8 @@ async def is_buy(callback: CallbackQuery):
     )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption='<b>— — Подписки — —</b>\n\n\n'
-        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> <b>У вас УЖЕ ЕСТЬ активные подписки!</b> Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками по кнопке <b>«Мои подписки»</b>',
+        caption='<b>У вас УЖЕ ЕСТЬ активные подписки!</b>\n\n'
+        '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Если вы хотите продлить существующую подписку, перейдите в раздел с вашими подписками',
         reply_markup=builder.adjust(1).as_markup(),
         parse_mode='HTML'
     )
@@ -244,18 +240,18 @@ def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     for month, price in price_list.items():
-        builder.button(
-            text=f'{month} месяц{suffix[month]} ({int(price) * int(sub_count)}₽)',
-            callback_data=f'{callback}{month}',
-            icon_custom_emoji_id='5258165702707125574',
-            style='success'
-        )
+        if price:
+            builder.button(
+                text=f'{month} месяц{suffix[month]} ({int(price) * int(sub_count)}₽)',
+                callback_data=f'{callback}{month}',
+                icon_custom_emoji_id='5258165702707125574',
+                style='success'
+            )
     builder.button(
         text='Назад', 
         callback_data='subs', 
         icon_custom_emoji_id='5258236805890710909'
     )
-
     return builder.adjust(1).as_markup()
 
 
@@ -265,13 +261,9 @@ def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
 async def renewal_month(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     uuid = callback.data.removeprefix('month_')
-    caption = ["Подписка", "Выберите срок подписки:"]
-
-    if uuid:
-        caption = ["Продление подписки", "Выберите срок продления подписки:"]
 
     await callback.message.edit_caption(
-        caption=f'<b>— — {caption[0]} — —</b>\n\n\n<tg-emoji emoji-id="5199457120428249992">🕔</tg-emoji> {caption[1]}',
+        caption=f'<i>Выберите срок {"продления " if uuid else ""}подписки</i>',
         reply_markup=time_choose(uuid),
         parse_mode='HTML'
     )
@@ -282,21 +274,21 @@ async def renewal_month(callback: CallbackQuery):
 @errors_loging
 async def buy_month(callback: CallbackQuery):
     full = callback.data.removeprefix('agreement_')
-
     text = ''
-    start_text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Перед оплатой вам необходимо принять'
-    end_text = '. Нажимая кнопку <b>«Перейти к оплате»</b> вы подтверждаете, что ознакомились и согласны с применимыми условиями и политиками сервиса.\n\n\n'
-    terms_text = f'<a href="{config.telegram.terms_url}">Условия пользования</a>'
-    privacy_text = f'<a href="{config.telegram.privacy_url}">Политику конфиденциальности</a>'
     x = 1
+
+    start_text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Нажимая кнопку <b>«Перейти к оплате»</b> вы подтверждаете, что ознакомились и согласны с'
+    terms_text = f'<a href="{config.telegram.terms_url}">Условиями пользования</a>'
+    privacy_text = f'<a href="{config.telegram.privacy_url}">Политикой конфиденциальности</a>'
+    
 
     if config.telegram.terms_url and config.telegram.privacy_url:
         x = 2
-        text = f'{start_text} {terms_text} и {privacy_text}{end_text}'
+        text = f'{start_text} {terms_text} и {privacy_text}.\n\n'
     elif config.telegram.terms_url:
-        text = f'{start_text} {terms_text}{end_text}'
+        text = f'{start_text} {terms_text}.\n\n'
     elif config.telegram.privacy_url:
-        text = f'{start_text} {privacy_text}{end_text}'
+        text = f'{start_text} {privacy_text}.\n\n'
 
     if '_' in full:
         uuid = full.split("_")[0]
@@ -311,7 +303,6 @@ async def buy_month(callback: CallbackQuery):
         month = full
 
     builder = InlineKeyboardBuilder()
-
     builder.button(
         text='Перейти к оплате', 
         callback_data=f'upay_{full}',
@@ -340,11 +331,9 @@ async def buy_month(callback: CallbackQuery):
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption='<b>— — Оплата — —</b>\n\n\n'
-        f'<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n'
-        f'{caption[1]}\n\n\n'
-        f'{text}'
-        '<tg-emoji emoji-id="5260450573768990626">➡️</tg-emoji> Для продолжения нажмите кнопку <b>«Перейти к оплате»</b>',
+        caption=f'Вы выбрали {caption[0]} на {month} месяц{suffix[month]}!\n\n'
+        f'<tg-emoji emoji-id="5260341314095947411">✅</tg-emoji> {caption[1]}\n\n{text}'
+        '<i>Для продолжения нажмите кнопку <b>«Перейти к оплате»</b></i>',
         reply_markup=builder.adjust(1, x).as_markup(),
         parse_mode='HTML'
     )
@@ -356,29 +345,24 @@ async def buy_month(callback: CallbackQuery):
 async def upay(callback: CallbackQuery, bot_info):
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"<b>— — Создание оплаты — —</b>\n\n\n"
-        "<i>Ссылка для оплаты формируется, подождите секунду...\n</i>",
+        caption="<i>Ссылка для оплаты формируется, подождите секунду...\n</i>",
         parse_mode='HTML'
     )
-
     month = callback.data.removeprefix('upay_')
     user_id = callback.from_user.id
+    
     username = callback.from_user.username if callback.from_user.username else str(user_id)
     uuid = ''
 
-    user = await database.users.get_user(user_id)
-
-    if not user:
+    if not await database.users.get_user(user_id):
         await callback.message.edit_caption(
-            caption=f'<b>— — Ошибка — —</b>\n\n\n'
-            'Для корректной работы перезапустите бота командой /start',
+            caption='Произошла ошибка! Для корректной работы перезапустите бота командой /start',
             parse_mode='HTML'
         )
         return
 
     if '_' in month:
-        uuid = month.split("_")[0]
-        month = month.split("_")[1]
+        uuid, month = (i for i in month.split("_"))
 
     global return_url
 
@@ -392,7 +376,6 @@ async def upay(callback: CallbackQuery, bot_info):
         return_url=return_url,
         uuid=uuid
     )
-    text = '<tg-emoji emoji-id="5258336354642697821">📃</tg-emoji> Нажмите <b>кнопку ниже</b> для перехода на страницу оплаты'
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -408,7 +391,7 @@ async def upay(callback: CallbackQuery, bot_info):
     )
 
     await callback.message.edit_caption(
-        caption=f"<b>— — Оплата подписки — —</b>\n\n\n{text}", 
+        caption='<i>Нажмите на кнопку для перехода на страницу оплаты</i>', 
         reply_markup=builder.adjust(1).as_markup(), 
         parse_mode='HTML'
     )
@@ -425,8 +408,8 @@ async def ays(callback: CallbackQuery):
     text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> У вас уже есть подписка, пробный период недоступен!'
     
     if not user_has_sub:
-        text = f'<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Вы уверены, что хотите активировать пробный период? Он действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг. '\
-                'Пробный период доступен только для новых пользователей и может быть активирован только один раз.'
+        text = f'Пробный период действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг.\n\n'\
+                '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Он доступен только для новых пользователей и может быть активирован только один раз'
         builder.button(
             text='Активировать', 
             callback_data='test_period', 
@@ -442,7 +425,7 @@ async def ays(callback: CallbackQuery):
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"<b>— — Пробный период — —</b>\n\n\n{text}",
+        caption=text,
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
@@ -476,16 +459,15 @@ async def test_period(callback: CallbackQuery, bot: Bot):
     )
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption="<b>— — Пробный период — —</b>\n\n\n"
-        f"<tg-emoji emoji-id='5260416304224936047'>✅</tg-emoji> Пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} активирован! Ваша подписка:\n\n{sub}",
+        caption=f"Пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)} активирован!\n\n"
+        f"<tg-emoji emoji-id='5260416304224936047'>✅</tg-emoji> Ваша подписка:\n\n{sub}",
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
     )
     a_link = f'<a href="tg://user?id={username}">' if username.isdigit() else f'<a href="tg://resolve?domain={username}">'
     emoji = '<tg-emoji emoji-id="5258258882022612173">⌛️</tg-emoji>'
 
-    log_text = '<b>— — Пробный период — —</b>\n\n\n'\
-        f'{emoji} Пользователь {a_link}<b>{username}</b></a> активировал пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)}!'
+    log_text = f'{emoji} Пользователь {a_link}<b>{username}</b></a> активировал пробный период на {config.subscription.trial_days} {day_word(config.subscription.trial_days)}!'
     
     if config.telegram.log_chat_id:
             await bot.send_message(
