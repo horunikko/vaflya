@@ -24,9 +24,12 @@ def errors_loging(func):
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 return
+            else:
+                logger.error("Произошла непредвиденная ошибка:", exc_info=True)
 
-        logger.exception("Произошла непредвиденная ошибка")
-    
+        except Exception as e:
+            logger.error("Произошла непредвиденная ошибка:", exc_info=True)
+
     return wrapper
 
 
@@ -212,13 +215,13 @@ def if_info(info_text) -> InlineKeyboardMarkup | None:
 
     if any(instruction.values()):
         kb_builder.button(
-            text='Как подключить?',
+            text='Инструкция',
             callback_data='manual',
             style='primary', 
             icon_custom_emoji_id='5258328383183396223'
         )
     else:
-        logger.info("Кнопка 'Как подключить?' отключена")
+        logger.info("Кнопка 'Инструкция' отключена")
 
     if info_text:
         kb_builder.button(
