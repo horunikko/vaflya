@@ -111,21 +111,18 @@ def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = Fal
     """Возвращает клавиатуру для выбора подписок, с которой пользователь будет взаимодействовать"""
     builder = InlineKeyboardBuilder()
 
-    x = 0
-    first = 2
-    second = 1
-
     for username, uuid in users.items():
-        x += 1
         builder.button(
             text=username,
             callback_data=f"{'admin_' if admin else ''}sub_action_{str(uuid)}",
             style='primary',
             icon_custom_emoji_id='5260399854500191689'
         )
+    count = len(list(builder.buttons)) - 4
+
     builder.button(
         text="Массовые действия" if admin else "Продлить все подписки",
-        callback_data=f"admin_mass_actionbs_{tg_id}" if admin else f"month_{x}",
+        callback_data=f"admin_bulk_actions_{tg_id}" if admin else f"month_{count}",
         style='success',
         icon_custom_emoji_id='5258513401784573443'
     )
@@ -134,10 +131,15 @@ def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = Fal
         callback_data="admin_menu" if admin else "subs",
         icon_custom_emoji_id='5258236805890710909'
     )
-    if x > 3:
-        second = 2
 
-    return builder.adjust(first, second, 1, 1).as_markup()
+    rows = [2]
+    
+    while count > 0:
+        rows.append(2 if count >= 2 else 1)
+
+    rows.extend([1, 1])
+
+    return builder.adjust(*rows).as_markup()
 
 
 async def send_to_user(bot: Bot, user: int | str, text: str, kb: InlineKeyboardMarkup):
