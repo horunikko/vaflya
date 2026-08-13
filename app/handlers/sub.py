@@ -106,7 +106,10 @@ async def get_subs(callback: CallbackQuery):
         )
         return
 
-    caption = ''.join(sub for sub in subs_list)
+    caption = ''
+    if len(subs_list) < 5:
+        caption = caption.join(sub for sub in subs_list)
+    
     subs_uuids = await remna.user_name(tg_id)
 
     # если подписок несколько
