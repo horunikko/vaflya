@@ -21,6 +21,10 @@ def errors_loging(func):
         try:
             return await func(*args, **kwargs)
 
+        except TelegramForbiddenError:
+            logger.error("Пользователь заблокировал бота")
+            return
+
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 return
@@ -68,8 +72,11 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
     return builder.adjust(1).as_markup()
 
 
-def choose_action(uuid: str, one: bool | None = True) -> InlineKeyboardMarkup:
-
+def choose_action(
+    username: str,
+    user_id: str | None = None,
+    one: bool | None = True
+) -> InlineKeyboardMarkup:
     """Возвращает клавиатуру с выбором Продлить/Устройства/Назад.
     Вызывается только с выводом информации о подписке пользователя.
     Значение one (количество подписок) определяет, вернётся ли пользователь
@@ -80,13 +87,13 @@ def choose_action(uuid: str, one: bool | None = True) -> InlineKeyboardMarkup:
     x = 1
     builder.button(
         text='Продлить',
-        callback_data=f'month_{uuid}',
+        callback_data=f'month_{username}',
         style='success',
         icon_custom_emoji_id='5258419835922030550'
     )
     builder.button(
         text='Устройства',
-        callback_data=f'device_{uuid}',
+        callback_data=f'device_{user_id}',
         style='primary',
         icon_custom_emoji_id='5258508428212445001'
     )
@@ -107,22 +114,22 @@ def choose_action(uuid: str, one: bool | None = True) -> InlineKeyboardMarkup:
     return builder.adjust(1, x).as_markup()
 
 
-def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = False) -> InlineKeyboardMarkup:
+def sub_action(users: list[str], tg_id: int | str, admin: bool | None = False) -> InlineKeyboardMarkup:
     """Возвращает клавиатуру для выбора подписок, с которой пользователь будет взаимодействовать"""
     builder = InlineKeyboardBuilder()
 
-    for username, uuid in users.items():
+    for username in users:
         builder.button(
             text=username,
-            callback_data=f"{'admin_' if admin else ''}sub_action_{str(uuid)}",
+            callback_data=f"{'admin_' if admin else ''}sub_action_{username}",
             style='primary',
             icon_custom_emoji_id='5260399854500191689'
         )
-    count = len(list(builder.buttons)) - 4
+    count = len(list(builder.buttons)) - 2
 
     builder.button(
         text="Массовые действия" if admin else "Продлить все подписки",
-        callback_data=f"admin_bulk_actions_{tg_id}" if admin else f"month_{count}",
+        callback_data=f"admin_bulk_actions_{tg_id}" if admin else f"month_{count + 2}",
         style='success',
         icon_custom_emoji_id='5258513401784573443'
     )
@@ -136,6 +143,7 @@ def sub_action(users: dict[str, str], tg_id: int | str, admin: bool | None = Fal
     
     while count > 0:
         rows.append(2 if count >= 2 else 1)
+        count -= 2
 
     rows.extend([1, 1])
 

@@ -89,7 +89,7 @@ async def yookassa_webhook(request: web.Request):
         user_id = int(metadata["user_id"])
         username = metadata["username"]
         month = metadata["month"]
-        uuid = metadata.get("uuid","")
+        remna_username = metadata.get("remna_username","")
         amount = payment["amount"]["value"]
         income_amount = payment["income_amount"]["value"]
 
@@ -104,12 +104,10 @@ async def yookassa_webhook(request: web.Request):
         if referral_from and config.subscription.ref_bonus_days and not user["has_payed_sub"]:
             bonus_days = config.subscription.ref_bonus_days
             subs = await remna.user_name(referral_from)
-            ref_sub = ''
 
-            for _, ref_uuid in subs.items():
-                ref_sub = ref_sub if ref_sub else _
+            for ref_username in subs:
                 await remna.update_user(
-                    uuid=str(ref_uuid),
+                    username=ref_username,
                     days=bonus_days
                 )
 
@@ -120,15 +118,15 @@ async def yookassa_webhook(request: web.Request):
             await send_to_user(
                 bot=bot,
                 user=referral_from,
-                text=f"<b>— — Рефералка — —</b>\n\n\n{text}", 
+                text=text, 
                 kb=ref_kb
             )
 
-        log_add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя {ref_sub}" if bonus_days else ''
+        log_add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя {subs[0]}" if bonus_days else ''
 
-        add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя <a href='tg://user?id={referral_from}'>{ref_sub}</a>" if bonus_days else ''
+        add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя <a href='tg://user?id={referral_from}'>{subs[0]}</a>" if bonus_days else ''
 
-        if not uuid:
+        if not remna_username:
             sub = await remna.create_user(
                 username=username, 
                 tg_id=str(user_id),
@@ -143,28 +141,27 @@ async def yookassa_webhook(request: web.Request):
             for_log_text = 'подписку'
 
         else:
-            uuids = []
+            usernames = []
             one = True
             emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
-            if uuid.isdigit():
+            if remna_username.isdigit() and remna_username < 30:
                 one = False
-                sub_count = int(uuid)
-                lst = await remna.user_name(tg_id=user_id)
-                for _, uuid in lst.items():
-                    uuids.append(str(uuid))
+                sub_count = int(remna_username)
+                for us_name in await remna.user_name(tg_id=user_id):
+                    usernames.append(us_name)
             else:
-                uuids.append(uuid)
+                usernames.append(remna_username)
 
-            for uuid in uuids:
+            for remna_username in usernames:
                 sub_name = await remna.update_user(
-                    uuid=uuid,
+                    username=remna_username,
                     month=int(month),
                     days=bonus_days,
                     traffic=config.subscription.base_traffic,
                     device_limit=config.subscription.base_devices
                 )
-                await database.notifications.create_or_update(uuid=uuid, notify_days=None)
+                await database.notifications.create_or_update(username=remna_username, notify_days=None)
                 
                 text = f"Подписка {sub_name} продлена на {month} месяц{suffix[month]}!"
                 logger.info(text)
@@ -179,7 +176,7 @@ async def yookassa_webhook(request: web.Request):
         await send_to_user(
             bot=bot,
             user=user_id,
-            text=f"<b>— — Оплата прошла успешно! — —</b>\n\n\n{text}", 
+            text=text, 
             kb=kb
         )
         
@@ -187,8 +184,7 @@ async def yookassa_webhook(request: web.Request):
 
         a_link = f'<a href="tg://user?id={user_id}">' if username.isdigit() else f'<a href="tg://resolve?domain={username}">'
 
-        log_text = '<b>— — Новая покупка — —</b>\n\n'\
-        f'{emoji} Пользователь {a_link}<b>{username}</b></a> оплатил {for_log_text} на {month} месяц{suffix[month]}{add_text}!\n\n'\
+        log_text = f'{emoji} Пользователь {a_link}<b>{username}</b></a> оплатил {for_log_text} на {month} месяц{suffix[month]}{add_text}!\n\n'\
         f'<tg-emoji emoji-id="5258336354642697821">⚡️</tg-emoji> Сумма оплаты: {amount} руб.\n'\
         f'<tg-emoji emoji-id="5357069174512303778">✅</tg-emoji> Сумма с учётом комиссии: {income_amount} руб.'
 

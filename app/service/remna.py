@@ -2,7 +2,7 @@ import logging
 import asyncio
 from datetime import datetime, timedelta, timezone
 from remnawave import RemnawaveSDK
-from remnawave.models import CreateUserRequestDto, UpdateUserRequestDto, DeleteUserAllHwidDeviceRequestDto
+from remnawave.models import CreateUserBodyDto, UpdateUserBodyDto, DeleteUserAllHwidDeviceRequestDto
 from remnawave.exceptions.general import NotFoundError
 
 from config import config
@@ -40,7 +40,7 @@ class Remnawave:
                 if not user.telegram_id:
                     continue
 
-                sub_days = await database.notifications.get_days(str(user.uuid))
+                sub_days = await database.notifications.get_days(user.username)
                 final_day = None
                 
                 for day in notify_days:
@@ -49,8 +49,8 @@ class Remnawave:
                         break
                 
                 if final_day is not None and (sub_days is None or final_day < sub_days):
-                    result[day].append({"user_id": user.telegram_id, "username": user.username, "user_uuid": user.uuid})
-                    await database.notifications.create_or_update(uuid=str(user.uuid), notify_days=final_day)
+                    result[day].append({"tg_id": user.telegram_id, "username": user.username})
+                    await database.notifications.create_or_update(username=user.username, notify_days=final_day)
 
             start += 25
         
@@ -58,7 +58,7 @@ class Remnawave:
 
 
     async def _text_user_stats(self, user) -> str:
-        """Формирует и возвращает текст с информацией о подписке по его uuid и hwid"""
+        """Формирует и возвращает текст с информацией о подписке по его id и hwid"""
         # проверка глобального hwid лимита
         if self.hwid_limit is None:
             global_limit = await self.sdk.subscriptions_settings.get_settings()
@@ -71,7 +71,7 @@ class Remnawave:
         # лимит самого пользователя
         hwid_device = user.hwid_device_limit
 
-        hwid = await self.sdk.hwid.get_hwid_user(uuid=str(user.uuid))
+        hwid = await self.sdk.hwid.get_hwid_user(user_id=str(user.id))
         
         if hwid_device == 0:
             hwid_device = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
@@ -88,58 +88,63 @@ class Remnawave:
         if int(user.expire_at.strftime('%Y')) >= 2099:
             expire_time = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
 
-        return (f"{active} {user.username}\n"
-                "<blockquote expandable>"
-                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'
-                f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'
-                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{int(hwid.total)}</b>/{hwid_device}\n\n'
-                f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>'
+        text = f"{active} {user.username}\n"\
+                "<blockquote expandable>"\
+                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'\
+                f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'\
+                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{int(hwid.total)}</b>/{hwid_device}\n\n'\
+                f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>'\
                 "</blockquote>\n\n"
-                )
+
+        return (
+            {
+                "username": user.username,
+                "user_id": user.id,
+                "text": text
+            }
+        )
 
 
-    async def user_stats(self, tg_id: str | int | None = None, uuid: str | None = None) -> str | list[str] | None:
-        """Функция получения статистики по tg_id или uuid.
-        Возвращает список из инфы о всех подписках по тг айди или инфу о подписке по uuid"""
-        if uuid:
-            users = [await self.sdk.users.get_user_by_uuid(uuid=uuid)]
+    async def user_stats(self, tg_id: str | int | None = None, username: str | None = None) -> list[str] | None:
+        """Функция получения статистики по tg_id или id.
+        Возвращает список из инфы о всех подписках по тг айди или инфу о подписке по id"""
+        if username:
+            users = [await self.sdk.users.get_user_by_username(username=username)]
 
         if tg_id:
-            users = await self.sdk.users.get_users_by_telegram_id(str(tg_id))
+            responce = await self.sdk.users.get_users_stream(telegram_id=str(tg_id)) 
+            users = responce.users
 
         res = []
         for user in users:
             res.append(await self._text_user_stats(user))
         
         return res
-
-
-    async def has_user_sub(self, tg_id: str | int) -> bool:
-        """Возвращает истину при наличии у пользователя подписки"""
-        return bool(await self.sdk.users.get_users_by_telegram_id(str(tg_id)))
         
 
     async def user_name(self, tg_id: str | int) -> dict[str, str]:
-        """Возвращает словарь с парами значений всех подписок username : uuid по tg_id"""
-        users = await self.sdk.users.get_users_by_telegram_id(str(tg_id))
-        res = {}
-
-        for user in users:
-            res[user.username] = user.uuid
-
-        return res
+        """Возвращает список значений username всех подписок по tg_id"""
+        responce = await self.sdk.users.get_users_stream(telegram_id=str(tg_id))
+        return [user.username for user in responce.users]
 
 
-    async def delete_devices(self, uuid: str) -> None:
+    async def delete_devices(self, user_id: str) -> None:
         """Сбрасывает все устройства для подписки"""
         await self.sdk.hwid.delete_all_hwid_user(
             body=DeleteUserAllHwidDeviceRequestDto(
-                user_uuid=uuid
+                user_id=user_id
             )
         )
 
 
-    async def create_user(self, username: str, tg_id: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
+    async def create_user(self, 
+        username: str, 
+        tg_id: str, 
+        month: int | None = 0, 
+        days: int | None = 0, 
+        traffic: int | None = None, 
+        device_limit: int | None = None
+    ) -> str:
         """Создаёт подписку и возвращает её url"""
         end_date = datetime.now(timezone.utc) + timedelta(days=30*month) + timedelta(days=days)
         res_user = username
@@ -154,18 +159,13 @@ class Remnawave:
             except NotFoundError:
                 break
 
-        description = ''
-        if month < 1:
-            description = "Пробная подписка"
-
         traffic = traffic * 1024 * 1024 * 1024 if traffic is not None else None
 
         new_user = await self.sdk.users.create_user(
-            CreateUserRequestDto(
+            CreateUserBodyDto(
                 username=res_user,
                 telegram_id=str(tg_id),
                 expire_at=end_date,
-                description=description,
                 active_internal_squads=[config.subscription.base_squad_uuid],
                 traffic_limit_strategy="MONTH",
                 traffic_limit_bytes=traffic,
@@ -175,9 +175,15 @@ class Remnawave:
         return f'<code>{new_user.subscription_url}</code>'
 
 
-    async def update_user(self, uuid: str, month: int | None = 0, days: int | None = 0, traffic: int | None = None, device_limit: int | None = None) -> str:
+    async def update_user(self, 
+        username: str, 
+        month: int | None = 0, 
+        days: int | None = 0, 
+        traffic: int | None = None, 
+        device_limit: int | None = None
+    ) -> str:
         """Обновляет подписку по её {uuid} на {month} месяцев и возвращает её название"""
-        user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
+        user = await self.sdk.users.get_user_by_username(username=username)
 
         traffic = traffic * 1024 * 1024 * 1024 if traffic is not None else None
 
@@ -191,8 +197,8 @@ class Remnawave:
             new_expire = user.expire_at + timedelta(days=30*month) + timedelta(days=days)
 
         await self.sdk.users.update_user(
-            UpdateUserRequestDto(
-                uuid=uuid,
+            UpdateUserBodyDto(
+                username=username,
                 expire_at=new_expire,
                 traffic_limit_strategy="MONTH",
                 traffic_limit_bytes=traffic,
@@ -202,17 +208,17 @@ class Remnawave:
         return user.username
 
 
-    async def delete_user(self, uuid: str) -> str:
+    async def delete_user(self, username: str) -> str:
         """Удаление сабки пользователя"""
-        user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
-        await self.sdk.users.delete_user(uuid)
+        user = await self.sdk.users.get_user_by_username(username=username)
+        await self.sdk.users.delete_user(username)
         return user.telegram_id, user.username
 
 
-    async def disable_user(self, uuid: str) -> str:
+    async def disable_user(self, username: str) -> str:
         """Отключение сабки пользователя"""
-        user = await self.sdk.users.get_user_by_uuid(uuid=uuid)
-        await self.sdk.users.disable_user(uuid)
+        user = await self.sdk.users.get_user_by_username(username=username)
+        await self.sdk.users.disable_user(username)
         return user.telegram_id, user.username
 
 remna = Remnawave(

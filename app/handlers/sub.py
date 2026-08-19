@@ -23,7 +23,7 @@ return_url = config.yookassa.return_url
 async def subs_menu(callback: CallbackQuery):
     await callback.answer(cache_time=1)
     tg_id = str(callback.from_user.id)
-    res = await remna.has_user_sub(tg_id=tg_id)
+    res = await remna.user_name(tg_id=tg_id)
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -108,19 +108,18 @@ async def get_subs(callback: CallbackQuery):
 
     caption = ''
     if len(subs_list) < 5:
-        caption = caption.join(sub for sub in subs_list)
-    
-    subs_uuids = await remna.user_name(tg_id)
+        caption = caption.join(sub["text"] for sub in subs_list)
 
     # если подписок несколько
     if len(subs_list) > 1:
         text = "<i>Выберите подписку для управления:</i>"
-        kb = sub_action(users=subs_uuids, tg_id=tg_id)
+        users = [sub["username"] for sub in subs_list]
+        kb = sub_action(users=users, tg_id=tg_id)
 
     else:
         text = "<i>Выберите действие:</i>"
-        uuid = str(list(subs_uuids.values())[0])
-        kb = choose_action(uuid)
+        username = subs_list[0]["username"]
+        kb = choose_action(username)
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -134,14 +133,14 @@ async def get_subs(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("sub_action_"))
 @errors_loging
 async def sub_control(callback: CallbackQuery):
-    uuid = callback.data.removeprefix('sub_action_')
-    caption = await remna.user_stats(uuid=uuid)
+    username = callback.data.removeprefix('sub_action_')
+    caption = await remna.user_stats(username=username)
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"{caption[0]}<i>Выберите действие:</i>",
+        caption=f"{caption[0]['text']}<i>Выберите действие:</i>",
         parse_mode='HTML',
-        reply_markup=choose_action(uuid, one=False)
+        reply_markup=choose_action(username=username, user_id=caption[0]["user_id"], one=False)
     )
 
 
@@ -150,12 +149,12 @@ async def sub_control(callback: CallbackQuery):
 @errors_loging
 async def device_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
-    uuid = callback.data.removeprefix('device_')
+    user_id = callback.data.removeprefix('device_')
 
     builder = InlineKeyboardBuilder()
     builder.button(
         text='Сбросить устройства', 
-        callback_data=f'delete_device_{uuid}', 
+        callback_data=f'delete_device_{user_id}', 
         style='danger', 
         icon_custom_emoji_id='5260687681733533075'
     )
@@ -178,8 +177,8 @@ async def device_control(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("delete_device_"))
 @errors_loging
 async def delete_device(callback: CallbackQuery):
-    uuid = callback.data.removeprefix('delete_device_')
-    await remna.delete_devices(uuid=uuid)
+    user_id = callback.data.removeprefix('delete_device_')
+    await remna.delete_devices(user_id=user_id)
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -229,16 +228,16 @@ async def is_buy(callback: CallbackQuery):
     )
 
 
-def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
+def time_choose(username: str | int) -> InlineKeyboardMarkup:
     """Кливиатура с выбором времени покупки/продления подписки"""
     callback = 'agreement_'
     sub_count = 1
 
-    if user_uuid:
-        callback = f'agreement_{user_uuid}_'
+    if username:
+        callback = f'agreement_{username}_'
 
-    if user_uuid.isdigit():
-        sub_count = user_uuid
+    if username.isdigit() and int(username) < 10:
+        sub_count = username
 
     builder = InlineKeyboardBuilder()
 
@@ -263,11 +262,11 @@ def time_choose(user_uuid: str | int) -> InlineKeyboardMarkup:
 @errors_loging
 async def renewal_month(callback: CallbackQuery):
     await callback.answer(cache_time=1)
-    uuid = callback.data.removeprefix('month_')
+    username = callback.data.removeprefix('month_')
 
     await callback.message.edit_caption(
-        caption=f'<i>Выберите срок {"продления " if uuid else ""}подписки</i>',
-        reply_markup=time_choose(uuid),
+        caption=f'<i>Выберите срок {"продления " if username else ""}подписки</i>',
+        reply_markup=time_choose(username),
         parse_mode='HTML'
     )
 
@@ -294,15 +293,15 @@ async def buy_month(callback: CallbackQuery):
         text = f'{start_text} {privacy_text}.\n\n'
 
     if '_' in full:
-        uuid = full.split("_")[0]
+        username = full.split("_")[0]
         month = full.split("_")[1]
         caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
-        if uuid.isdigit():
+        if username.isdigit() and int(username) < 10:
             caption = ['продление подписок', 'После оплаты подписки продлятся на выбранный срок']
 
     else:
         caption = ['подписку', 'После оплаты вы получите ссылку на подписку и инструкцию к ней.']
-        uuid = ''
+        username = ''
         month = full
 
     builder = InlineKeyboardBuilder()
@@ -328,7 +327,7 @@ async def buy_month(callback: CallbackQuery):
         )
     builder.button(
         text='Назад', 
-        callback_data=f'month_{uuid}', 
+        callback_data=f'month_{username}', 
         icon_custom_emoji_id='5258236805890710909'
     )
 
@@ -355,7 +354,7 @@ async def upay(callback: CallbackQuery, bot_info):
     user_id = callback.from_user.id
     
     username = callback.from_user.username if callback.from_user.username else str(user_id)
-    uuid = ''
+    remna_username = ''
 
     if not await database.users.get_user(user_id):
         await callback.message.edit_caption(
@@ -365,7 +364,7 @@ async def upay(callback: CallbackQuery, bot_info):
         return
 
     if '_' in month:
-        uuid, month = (i for i in month.split("_"))
+        remna_username, month = (i for i in month.split("_"))
 
     global return_url
 
@@ -377,7 +376,7 @@ async def upay(callback: CallbackQuery, bot_info):
         username=username,
         month=month,
         return_url=return_url,
-        uuid=uuid
+        remna_username=remna_username
     )
 
     builder = InlineKeyboardBuilder()
@@ -404,13 +403,10 @@ async def upay(callback: CallbackQuery, bot_info):
 @router.callback_query(F.data == 'AYS') # are you sure (дофига англичанин, да)
 @errors_loging
 async def ays(callback: CallbackQuery):
-    tg_id = str(callback.from_user.id)
-    user_has_sub = await remna.has_user_sub(tg_id=tg_id)
-
     builder = InlineKeyboardBuilder()
     text = '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> У вас уже есть подписка, пробный период недоступен!'
     
-    if not user_has_sub:
+    if not await remna.user_name(tg_id=str(callback.from_user.id)):
         text = f'Пробный период действует {config.subscription.trial_days} {day_word(config.subscription.trial_days)} и позволяет оценить качество наших услуг.\n\n'\
                 '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Он доступен только для новых пользователей и может быть активирован только один раз'
         builder.button(

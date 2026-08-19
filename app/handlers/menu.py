@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def push_kb(uuid):
+def push_kb(username):
     """Клавиатура для уведомлений"""
     builder = InlineKeyboardBuilder()
     builder.button(
         text='Продлить подписку',
-        callback_data=f'month_{uuid}',
+        callback_data=f'month_{username}',
         icon_custom_emoji_id='5258419835922030550',
         style='success'
     )
@@ -50,10 +50,10 @@ async def push(bot: Bot) -> None:
                 else:
                     text = f'<tg-emoji emoji-id="5258258882022612173">⏳</tg-emoji> Подписка {user["username"]} истекает через {day} {day_word(day)}! Не забудьте продлить её!'
 
-                await send_to_user(bot=bot, user=user["user_id"], text=text, kb=push_kb(user["user_uuid"]))
+                await send_to_user(bot=bot, user=user["tg_id"], text=text, kb=push_kb(user["username"]))
 
-                logger.info(f'Пользователь {user["user_id"]} уведомлён')
-                await asyncio.sleep(0.05)
+                logger.info(f'Пользователь {user["username"]} уведомлён')
+                await asyncio.sleep(1)
             
         await asyncio.sleep(3600)
 
@@ -97,7 +97,7 @@ async def get_start(message: Message, command: CommandObject, bot_info, state: F
                 )
         await asyncio.sleep(1.5)
 
-    if not await database.users.get_user(tg_id) and await remna.has_user_sub(tg_id):
+    if not await database.users.get_user(tg_id) and await remna.user_name(tg_id):
         has_payed_sub = 1
 
     await database.users.create(
@@ -123,7 +123,7 @@ async def cb_menu(callback: CallbackQuery, bot_info, state: FSMContext):
     tg_id = callback.from_user.id
     has_payed_sub = None
 
-    if not await database.users.get_user(tg_id) and await remna.has_user_sub(tg_id):
+    if not await database.users.get_user(tg_id) and await remna.user_name(tg_id):
         has_payed_sub = 1
     
     await database.users.create(
