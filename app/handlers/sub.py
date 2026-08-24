@@ -119,7 +119,7 @@ async def get_subs(callback: CallbackQuery):
     else:
         text = "<i>Выберите действие:</i>"
         username = subs_list[0]["username"]
-        kb = choose_action(username)
+        kb = choose_action(username=subs_list[0]["username"], user_id=subs_list[0]["user_id"])
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -234,7 +234,7 @@ def time_choose(username: str | int) -> InlineKeyboardMarkup:
     sub_count = 1
 
     if username:
-        callback = f'agreement_{username}_'
+        callback = f'agreement_{username}:'
 
     if username.isdigit() and int(username) < 10:
         sub_count = username
@@ -292,9 +292,9 @@ async def buy_month(callback: CallbackQuery):
     elif config.telegram.privacy_url:
         text = f'{start_text} {privacy_text}.\n\n'
 
-    if '_' in full:
-        username = full.split("_")[0]
-        month = full.split("_")[1]
+    if ':' in full:
+        username = full.split(":")[0]
+        month = full.split(":")[1]
         caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
         if username.isdigit() and int(username) < 10:
             caption = ['продление подписок', 'После оплаты подписки продлятся на выбранный срок']
@@ -363,8 +363,8 @@ async def upay(callback: CallbackQuery, bot_info):
         )
         return
 
-    if '_' in month:
-        remna_username, month = (i for i in month.split("_"))
+    if ':' in month:
+        remna_username, month = (i for i in month.split(":"))
 
     global return_url
 
