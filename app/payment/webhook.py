@@ -145,7 +145,7 @@ async def yookassa_webhook(request: web.Request):
             one = True
             emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
-            if remna_username.isdigit() and remna_username < 30:
+            if remna_username.isdigit() and int(remna_username) < 15:
                 one = False
                 sub_count = int(remna_username)
                 for us_name in await remna.user_name(tg_id=user_id):

@@ -24,7 +24,7 @@ async def create_payment(
     logger.info("Начало формирования платежа")
 
     sub_count = 1
-    if remna_username and remna_username.isdigit():
+    if remna_username and remna_username.isdigit() and int(remna_username) < 15:
         sub_count = int(remna_username)
 
     payload = {
