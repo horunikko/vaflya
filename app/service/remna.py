@@ -147,6 +147,8 @@ class Remnawave:
     ) -> str:
         """Создаёт подписку и возвращает её url"""
         end_date = datetime.now(timezone.utc) + timedelta(days=30*month) + timedelta(days=days)
+        if username.isdigit():
+            username = 'tg' + username
         res_user = username
         i = 1
 
