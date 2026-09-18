@@ -69,7 +69,7 @@ async def ref_manual(callback: CallbackQuery):
         caption='<tg-emoji emoji-id="5323761960829862762">✨</tg-emoji> За <b>первую</b> покупку каждого приглашённого вами пользователя <b>вы</b> и <b>новый пользователь</b> ' 
         f'получите по <b>{ref_bonus_days} {day_word(days=ref_bonus_days, iskl=True)}</b> к вашим подпискам\n\n'
         '<tg-emoji emoji-id="5258474669769497337">❗️</tg-emoji> Для получения бонуса за приглашённых людей, вам необходимо иметь платную подписку!\n\n'
-        '<tg-emoji emoji-id="5258073068852485953">🔗</tg-emoji> Свою ссылку вы можете найти по кнопке ниже.'
+        '<tg-emoji emoji-id="5258073068852485953">🔗</tg-emoji> Свою ссылку вы можете найти по кнопке ниже. '
         'В том же разделе есть статистика по приглашённым пользователям и бонусным дням',
         parse_mode='HTML',
         reply_markup=builder.adjust(1).as_markup()
