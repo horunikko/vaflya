@@ -74,7 +74,7 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
 
 def choose_action(
     username: str,
-    user_id: str | None = None,
+    rw_id: str | None = None,
     one: bool | None = True
 ) -> InlineKeyboardMarkup:
     """Возвращает клавиатуру с выбором Продлить/Устройства/Назад.
@@ -93,7 +93,7 @@ def choose_action(
     )
     builder.button(
         text='Устройства',
-        callback_data=f'device_{user_id}',
+        callback_data=f'device_{rw_id}',
         style='primary',
         icon_custom_emoji_id='5258508428212445001'
     )

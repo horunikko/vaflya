@@ -99,6 +99,7 @@ async def proxy(callback: CallbackQuery):
 async def get_subs(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
     subs_list = await remna.user_stats(tg_id=tg_id)
+
     if not subs_list:
         await callback.answer(
             text='У вас нет подписок!',
@@ -119,7 +120,7 @@ async def get_subs(callback: CallbackQuery):
     else:
         text = "<i>Выберите действие:</i>"
         username = subs_list[0]["username"]
-        kb = choose_action(username=subs_list[0]["username"], user_id=subs_list[0]["user_id"])
+        kb = choose_action(username=subs_list[0]["username"], rw_id=subs_list[0]["rw_id"])
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -140,7 +141,7 @@ async def sub_control(callback: CallbackQuery):
     await callback.message.edit_caption(
         caption=f"{caption[0]['text']}<i>Выберите действие:</i>",
         parse_mode='HTML',
-        reply_markup=choose_action(username=username, user_id=caption[0]["user_id"], one=False)
+        reply_markup=choose_action(username=username, rw_id=caption[0]["rw_id"], one=False)
     )
 
 
@@ -149,12 +150,12 @@ async def sub_control(callback: CallbackQuery):
 @errors_loging
 async def device_control(callback: CallbackQuery):
     await callback.answer(cache_time=1)
-    user_id = callback.data.removeprefix('device_')
+    rw_id = callback.data.removeprefix('device_')
 
     builder = InlineKeyboardBuilder()
     builder.button(
         text='Сбросить устройства', 
-        callback_data=f'delete_device_{user_id}', 
+        callback_data=f'delete_device_{rw_id}', 
         style='danger', 
         icon_custom_emoji_id='5260687681733533075'
     )
@@ -177,8 +178,8 @@ async def device_control(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("delete_device_"))
 @errors_loging
 async def delete_device(callback: CallbackQuery):
-    user_id = callback.data.removeprefix('delete_device_')
-    await remna.delete_devices(user_id=user_id)
+    rw_id = callback.data.removeprefix('delete_device_')
+    await remna.delete_devices(rw_id=rw_id)
 
     builder = InlineKeyboardBuilder()
     builder.button(
