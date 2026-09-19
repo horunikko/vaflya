@@ -99,7 +99,7 @@ class Remnawave:
         return (
             {
                 "username": user.username,
-                "user_id": user.id,
+                "rw_id": user.id,
                 "text": text
             }
         )
@@ -128,11 +128,11 @@ class Remnawave:
         return [user.username for user in responce.users]
 
 
-    async def delete_devices(self, user_id: str) -> None:
+    async def delete_devices(self, rw_id: str) -> None:
         """Сбрасывает все устройства для подписки"""
         await self.sdk.hwid.delete_all_hwid_user(
             body=DeleteUserAllHwidDeviceRequestDto(
-                user_id=user_id
+                user_id=rw_id
             )
         )
 
