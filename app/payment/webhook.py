@@ -101,6 +101,8 @@ async def yookassa_webhook(request: web.Request):
         user = await database.users.get_user(user_id)
         referral_from = int(user["referral_from"]) if user["referral_from"] else None
 
+        emoji = '<tg-emoji emoji-id="5258165702707125574">⭐️</tg-emoji>'
+
         if referral_from and config.subscription.ref_bonus_days and not user["has_payed_sub"]:
             bonus_days = config.subscription.ref_bonus_days
             subs = await remna.user_name(referral_from)
@@ -136,14 +138,15 @@ async def yookassa_webhook(request: web.Request):
                 device_limit=config.subscription.base_devices
             )
             text = f"Ваша подписка на {month} месяц{suffix[month]}{log_add_text}:\n\n{sub}"
-            emoji = '<tg-emoji emoji-id="5258165702707125574">⭐️</tg-emoji>'
             logger.info(f"Подписка {username} на {month} месяц{suffix[month]} удачно создана")
             for_log_text = 'подписку'
 
         else:
             usernames = []
             one = True
-            emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
+
+            if user["has_payed_sub"]:
+                emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
             if remna_username.startswith("$"):
                 one = False
