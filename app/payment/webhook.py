@@ -89,7 +89,7 @@ async def yookassa_webhook(request: web.Request):
         user_id = int(metadata["user_id"])
         username = metadata["username"]
         month = metadata["month"]
-        remna_username = metadata.get("remna_username","")
+        remna_username: str = metadata.get("remna_username","")
         amount = payment["amount"]["value"]
         income_amount = payment["income_amount"]["value"]
 
@@ -145,9 +145,9 @@ async def yookassa_webhook(request: web.Request):
             one = True
             emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
-            if remna_username.isdigit() and int(remna_username) < 15:
+            if remna_username.startswith("$"):
                 one = False
-                sub_count = int(remna_username)
+                sub_count = int(remna_username.removeprefix("$"))
                 for us_name in await remna.user_name(tg_id=user_id):
                     usernames.append(us_name)
             else:

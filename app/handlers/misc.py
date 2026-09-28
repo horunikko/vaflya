@@ -129,7 +129,7 @@ def sub_action(users: list[str], tg_id: int | str, admin: bool | None = False) -
 
     builder.button(
         text="Массовые действия" if admin else "Продлить все подписки",
-        callback_data=f"admin_bulk_actions_{tg_id}" if admin else f"month_{count + 2}",
+        callback_data=f"admin_bulk_actions_{tg_id}" if admin else f"month_${count + 2}",
         style='success',
         icon_custom_emoji_id='5258513401784573443'
     )

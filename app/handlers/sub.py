@@ -237,15 +237,15 @@ def time_choose(username: str | int) -> InlineKeyboardMarkup:
     if username:
         callback = f'agreement_{username}:'
 
-    if username.isdigit() and int(username) < 10:
-        sub_count = username
+    if username.startswith("$"):
+        sub_count = int(username.removeprefix("$"))
 
     builder = InlineKeyboardBuilder()
 
     for month, price in price_list.items():
         if price:
             builder.button(
-                text=f'{month} месяц{suffix[month]} ({int(price) * int(sub_count)}₽)',
+                text=f'{month} месяц{suffix[month]} ({price * sub_count}₽)',
                 callback_data=f'{callback}{month}',
                 icon_custom_emoji_id='5258165702707125574',
                 style='success'
@@ -294,10 +294,9 @@ async def buy_month(callback: CallbackQuery):
         text = f'{start_text} {privacy_text}.\n\n'
 
     if ':' in full:
-        username = full.split(":")[0]
-        month = full.split(":")[1]
+        username, month = full.split(":")
         caption = ['продление подписки', 'После оплаты подписка продлится на выбранный срок.']
-        if username.isdigit() and int(username) < 10:
+        if username.startswith("$"):
             caption = ['продление подписок', 'После оплаты подписки продлятся на выбранный срок']
 
     else:
@@ -365,7 +364,7 @@ async def upay(callback: CallbackQuery, bot_info):
         return
 
     if ':' in month:
-        remna_username, month = (i for i in month.split(":"))
+        remna_username, month = month.split(":")
 
     global return_url
 
