@@ -22,10 +22,10 @@ bot = Bot(token=config.telegram.token)
 dp = Dispatcher()
 
 
-from handlers import menu, info, sub, admin, referral
-for router in (menu.router, info.router, sub.router, admin.router, referral.router):
-    dp.include_router(router)
-
+from handlers import router as handler_router
+from admin import router as admin_router
+dp.include_router(handler_router)
+dp.include_router(admin_router)
 
 
 async def start_webhook(bot):
