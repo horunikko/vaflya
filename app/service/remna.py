@@ -8,8 +8,7 @@ from remnawave.exceptions.general import NotFoundError
 from config import config
 from database.db import database
 
-from pydantic import BaseModel
-import httpx
+from handlers.misc import UserStats
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +95,14 @@ class Remnawave:
                 f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>'\
                 "</blockquote>\n\n"
 
-        return (
-            {
-                "username": user.username,
-                "rw_id": user.id,
-                "text": text
-            }
-        )
+        res = {
+            "username": user.username,
+            "rw_id": user.id,
+            "expire_time": expire_time,
+            "devices": hwid_device,
+            "text": text
+        }
+        return (UserStats(**res))
 
 
     async def user_stats(self, tg_id: str | int | None = None, username: str | None = None) -> list[str] | None:
@@ -115,7 +115,7 @@ class Remnawave:
             responce = await self.sdk.users.get_users_stream(telegram_id=str(tg_id)) 
             users = responce.users
 
-        res = []
+        res: list[UserStats] = []
         for user in users:
             res.append(await self._text_user_stats(user))
         

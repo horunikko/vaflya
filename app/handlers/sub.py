@@ -3,7 +3,7 @@ from aiogram import F, Router, Bot
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
-from handlers.misc import choose_action, day_word, sub_action, suffix, price_list, errors_loging
+from handlers.misc import choose_action, day_word, sub_action, suffix, price_list, errors_loging, UserStats
 
 from service.remna import remna
 from payment.yookassa import create_payment
@@ -98,7 +98,7 @@ async def proxy(callback: CallbackQuery):
 @errors_loging
 async def get_subs(callback: CallbackQuery):
     tg_id = str(callback.from_user.id)
-    subs_list = await remna.user_stats(tg_id=tg_id)
+    subs_list: list[UserStats] = await remna.user_stats(tg_id=tg_id)
 
     if not subs_list:
         await callback.answer(
@@ -109,18 +109,17 @@ async def get_subs(callback: CallbackQuery):
 
     caption = ''
     if len(subs_list) < 5:
-        caption = caption.join(sub["text"] for sub in subs_list)
+        caption = caption.join(sub.text for sub in subs_list)
 
     # если подписок несколько
     if len(subs_list) > 1:
         text = "<i>Выберите подписку для управления:</i>"
-        users = [sub["username"] for sub in subs_list]
+        users = [sub.username for sub in subs_list]
         kb = sub_action(users=users, tg_id=tg_id)
 
     else:
         text = "<i>Выберите действие:</i>"
-        username = subs_list[0]["username"]
-        kb = choose_action(username=subs_list[0]["username"], rw_id=subs_list[0]["rw_id"])
+        kb = choose_action(user=subs_list[0])
     
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
@@ -135,13 +134,13 @@ async def get_subs(callback: CallbackQuery):
 @errors_loging
 async def sub_control(callback: CallbackQuery):
     username = callback.data.removeprefix('sub_action_')
-    caption = await remna.user_stats(username=username)
+    subs_list: list[UserStats] = await remna.user_stats(username=username)
 
     await callback.answer(cache_time=1)
     await callback.message.edit_caption(
-        caption=f"{caption[0]['text']}<i>Выберите действие:</i>",
+        caption=f"{subs_list[0].text}<i>Выберите действие:</i>",
         parse_mode='HTML',
-        reply_markup=choose_action(username=username, rw_id=caption[0]["rw_id"], one=False)
+        reply_markup=choose_action(user=subs_list[0], one=False)
     )
 
 

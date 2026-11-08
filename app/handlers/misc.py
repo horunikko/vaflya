@@ -3,6 +3,8 @@ import random
 import logging
 from functools import wraps
 
+from pydantic import BaseModel
+
 from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, FSInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -12,6 +14,15 @@ from config import config
 
 
 logger = logging.getLogger(__name__)
+
+
+class UserStats(BaseModel):
+    """Класс типизации ответов статистики пользователя"""
+    username: str
+    rw_id: int
+    expire_time: str | int
+    devices: str | int
+    text: str
 
 
 def errors_loging(func):
@@ -73,8 +84,7 @@ def inline_start(user_id: str | int = None) -> InlineKeyboardMarkup:
 
 
 def choose_action(
-    username: str,
-    rw_id: str | None = None,
+    user: UserStats,
     one: bool | None = True
 ) -> InlineKeyboardMarkup:
     """Возвращает клавиатуру с выбором Продлить/Устройства/Назад.
@@ -87,13 +97,13 @@ def choose_action(
     x = 1
     builder.button(
         text='Продлить',
-        callback_data=f'month_{username}',
+        callback_data=f'month_{user.username}',
         style='success',
         icon_custom_emoji_id='5258419835922030550'
     )
     builder.button(
         text='Устройства',
-        callback_data=f'device_{rw_id}',
+        callback_data=f'device_{user.rw_id}',
         style='primary',
         icon_custom_emoji_id='5258508428212445001'
     )
