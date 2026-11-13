@@ -18,7 +18,7 @@ async def create_simple_receipt(month: int, user_id: str, sub_count: int = 1):
 
     client = Client(
         base_url="https://lknpd.nalog.ru/api",
-        storage_path="app/handlers/tokens.json",
+        storage_path="app/service/tokens.json",
         device_id="my-device-123",
         proxy=config.nalogo.proxy
     )
