@@ -1,8 +1,7 @@
 import logging
-import asyncio
 from datetime import datetime, timedelta, timezone
 from remnawave import RemnawaveSDK
-from remnawave.models import CreateUserBodyDto, UpdateUserBodyDto, DeleteUserAllHwidDeviceRequestDto
+from remnawave.models import CreateUserBodyDto, UpdateUserBodyDto, DeleteUserAllHwidDeviceRequestDto, UserResponseDto
 from remnawave.exceptions.general import NotFoundError
 
 from config import config
@@ -13,11 +12,21 @@ from handlers.misc import UserStats
 logger = logging.getLogger(__name__)
 
 
+INF = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
+
+def _emoji(emoji_id: str, fallback: str) -> str:
+    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+
+
+def _to_gb(value: int) -> float:
+    return round(value / 1024 ** 3, 2)
+
+
 class Remnawave:
-    def __init__(self, token, panel_url, hwid_limit):
+    def __init__(self, token, panel_url):
         self.token = token
         self.panel_url = panel_url
-        self.hwid_limit = hwid_limit
+        self.hwid_limit = None
 
         self.sdk = RemnawaveSDK(base_url=self.panel_url, token=self.token)
 
@@ -56,53 +65,53 @@ class Remnawave:
         return result
 
 
-    async def _text_user_stats(self, user) -> str:
-        """Формирует и возвращает текст с информацией о подписке по его id и hwid"""
-        # проверка глобального hwid лимита
+    async def _get_hwid_limit(self):
+        """Глобальный лимит устройств"""
         if self.hwid_limit is None:
-            global_limit = await self.sdk.subscriptions_settings.get_settings()
+            settings = (await self.sdk.subscriptions_settings.get_settings()).hwid_settings
+            self.hwid_limit = settings.fallback_device_limit if settings.enabled else 0
+        return self.hwid_limit
 
-            if global_limit.hwid_settings.enabled:
-                self.hwid_limit = global_limit.hwid_settings.fallback_device_limit
-            else:
-                self.hwid_limit = False
 
-        # лимит самого пользователя
-        hwid_device = user.hwid_device_limit
-
+    async def _text_user_stats(self, user: UserResponseDto) -> UserStats:
+        """Формирует и возвращает текст с информацией о подписке по его id и hwid"""
+        global_hwid_limit = await self._get_hwid_limit()
         hwid = await self.sdk.hwid.get_hwid_user(user_id=str(user.id))
         
-        if hwid_device == 0:
-            hwid_device = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
-        elif hwid_device is None:
-            hwid_device = self.hwid_limit
+        if user.hwid_device_limit == 0:
+            devices = INF
+        elif user.hwid_device_limit is None:
+            devices = global_hwid_limit
+        else:
+            devices = user.hwid_device_limit
 
-        gb = lambda num: round(num / (1024 * 1024 * 1024), 2)
+        is_active = user.status.lower() == 'active'
+        status = _emoji("5260342697075416641", "✅") if is_active else _emoji("5260342697075416641", "❌")
 
-        active = '<tg-emoji emoji-id="5260342697075416641">❌</tg-emoji>'
-        if user.status.lower() == 'active':
-            active = '<tg-emoji emoji-id="5260416304224936047">✅</tg-emoji>'
+        expire_time = INF if user.expire_at.year >= 2099 else user.expire_at.strftime('%d.%m.%Y')
 
-        expire_time = user.expire_at.strftime('%d.%m.%Y')
-        if int(user.expire_at.strftime('%Y')) >= 2099:
-            expire_time = '<tg-emoji emoji-id="5271934788037517525">♾️</tg-emoji>'
+        text = (
+            f"{status} {user.username}\n"
+            "<blockquote expandable>"
+            f'{_emoji("5260730055880876557", "🔗")} Ссылка на подписку: '
+            f'<code>{user.subscription_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'
 
-        text = f"{active} {user.username}\n"\
-                "<blockquote expandable>"\
-                f'<tg-emoji emoji-id="5260730055880876557">🔗</tg-emoji> Ссылка на подписку: <code>{user.subscription_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'\
-                f'<tg-emoji emoji-id="5199457120428249992">📆</tg-emoji> Дата истечения подписки: {expire_time}\n\n'\
-                f'<tg-emoji emoji-id="5258508428212445001">📱</tg-emoji> Количество устройств: <b>{int(hwid.total)}</b>/{hwid_device}\n\n'\
-                f'<tg-emoji emoji-id="5258330865674494479">⚡️</tg-emoji> Трафик <i>(месяц/всё время)</i>: <b>{gb(user.used_traffic_bytes)}ГБ / {gb(user.lifetime_used_traffic_bytes)}ГБ</b>'\
-                "</blockquote>\n\n"
+            f'{_emoji("5199457120428249992", "📆")} Дата истечения подписки: {expire_time}\n\n'
 
-        res = {
-            "username": user.username,
-            "rw_id": user.id,
-            "expire_time": expire_time,
-            "devices": hwid_device,
-            "text": text
-        }
-        return (UserStats(**res))
+            f'{_emoji("5258508428212445001", "📱")} Количество устройств: <b>{int(hwid.total)}</b>/{devices}\n\n'
+
+            f'{_emoji("5258330865674494479", "⚡️")} Трафик <i>(месяц/всё время)</i>: '
+            f'<b>{_to_gb(user.used_traffic_bytes)}ГБ / {_to_gb(user.lifetime_used_traffic_bytes)}ГБ</b>'
+            "</blockquote>\n\n"
+        )
+
+        return UserStats(
+            username=user.username,
+            rw_id=user.id,
+            expire_time=expire_time,
+            devices=devices,
+            text=text
+        )
 
 
     async def user_stats(self, tg_id: str | int | None = None, username: str | None = None) -> list[str] | None:
@@ -118,7 +127,7 @@ class Remnawave:
         res: list[UserStats] = []
         for user in users:
             res.append(await self._text_user_stats(user))
-        
+
         return res
         
 
@@ -213,18 +222,16 @@ class Remnawave:
     async def delete_user(self, username: str) -> str:
         """Удаление сабки пользователя"""
         user = await self.sdk.users.get_user_by_username(username=username)
-        await self.sdk.users.delete_user(username)
-        return user.telegram_id, user.username
+        await self.sdk.users.delete_user(user.id)
+        return user.telegram_id
 
 
-    async def disable_user(self, username: str) -> str:
+    async def disable_user(self, rw_id: int) -> str:
         """Отключение сабки пользователя"""
-        user = await self.sdk.users.get_user_by_username(username=username)
-        await self.sdk.users.disable_user(username)
+        user = await self.sdk.users.disable_user(rw_id)
         return user.telegram_id, user.username
 
 remna = Remnawave(
     token=config.remnawave.token,
-    panel_url=config.remnawave.panel_url,
-    hwid_limit=None
+    panel_url=config.remnawave.panel_url
 )

@@ -1,7 +1,6 @@
 import logging
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 
 from config import config
 from service.nalog import create_simple_receipt
@@ -9,103 +8,46 @@ from handlers.misc import day_word, suffix, get_random_photo, send_to_user
 from service.remna import remna
 from database.db import database
 
+from .payment_misc import kb, ref_kb, WebhookData
 
 logger = logging.getLogger(__name__)
-
-
-kb = InlineKeyboardMarkup(inline_keyboard=[
-    [
-        InlineKeyboardButton(
-            text='Инструкция', 
-            callback_data='manual', 
-            style='success', 
-            icon_custom_emoji_id='5258328383183396223'
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text='Подписки', 
-            callback_data='subs', 
-            style='primary', 
-            icon_custom_emoji_id="5226513232549664618"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text='В меню', 
-            callback_data='menu', 
-            icon_custom_emoji_id='5257963315258204021'
-        )
-    ]
-])
-
-ref_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [
-        InlineKeyboardButton(
-            text='Подписки', 
-            callback_data='subs', 
-            style='success', 
-            icon_custom_emoji_id="5226513232549664618"
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text='Реферальная система',
-            callback_data='ref_system',
-            style='primary',
-            icon_custom_emoji_id='5258165702707125574'
-        )
-    ],
-    [
-        InlineKeyboardButton(
-            text='В меню', 
-            callback_data='menu', 
-            icon_custom_emoji_id='5257963315258204021'
-        )
-    ]
-])
 
 
 async def yookassa_webhook(request: web.Request):
     bot: Bot = request.app["bot"]
     try:
-        data = await request.json()
+        data = WebhookData(**(await request.json()))
         logger.info(f"Получен вебхук: {data}")
-        event = data.get("event")
 
-        payment = data.get("object", {})
-        payment_id = payment.get("id")
+        payment = data.object
 
-        if event != "payment.succeeded":
+        if data.event != "payment.succeeded":
             return web.Response(text="ignored")
 
-        if await database.payment.is_processed(payment_id):
+        if await database.payment.is_processed(payment.id):
             return web.Response(text="ignored")
         
-        await database.payment.mark_processed(payment_id)
+        await database.payment.mark_processed(payment.id)
 
-        metadata = payment.get("metadata", {})
+        user_id = data.object.metadata.user_id
+        username = data.object.metadata.username
+        month = data.object.metadata.month
+        remna_username = data.object.metadata.remna_username
+        amount = data.object.amount.value
+        income_amount = data.object.income_amount.value
 
-        user_id = int(metadata["user_id"])
-        username = metadata["username"]
-        month = metadata["month"]
-        remna_username: str = metadata.get("remna_username","")
-        amount = payment["amount"]["value"]
-        income_amount = payment["income_amount"]["value"]
-
-        logger.info(f"Успешный платёж {payment_id} от пользователя {username}")
+        logger.info(f"Успешный платёж {payment.id} от пользователя {username}")
 
         bonus_days = 0
         sub_count = 1
 
         user = await database.users.get_user(user_id)
-        referral_from = int(user["referral_from"]) if user["referral_from"] else None
 
         emoji = '<tg-emoji emoji-id="5258165702707125574">⭐️</tg-emoji>'
 
-        if referral_from and config.subscription.ref_bonus_days and not user["has_payed_sub"]:
+        if user.referral_from and config.subscription.ref_bonus_days and not user.has_payed_sub:
             bonus_days = config.subscription.ref_bonus_days
-            subs = await remna.user_name(referral_from)
+            subs = await remna.user_name(user.referral_from)
 
             for ref_username in subs:
                 await remna.update_user(
@@ -113,20 +55,20 @@ async def yookassa_webhook(request: web.Request):
                     days=bonus_days
                 )
 
-            await database.users.update_ref_count(referral_from)
+            await database.users.update_ref_count(user.referral_from)
 
             text = f'Вы получили {bonus_days} {day_word(bonus_days)} ко всем вашим подпискам за пользователя {username}'
 
             await send_to_user(
                 bot=bot,
-                user=referral_from,
+                user=user.referral_from,
                 text=text, 
                 kb=ref_kb
             )
 
         log_add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя {subs[0]}" if bonus_days else ''
 
-        add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя <a href='tg://user?id={referral_from}'>{subs[0]}</a>" if bonus_days else ''
+        add_text = f" + {bonus_days} {day_word(bonus_days)} за пользователя <a href='tg://user?id={user.referral_from}'>{subs[0]}</a>" if bonus_days else ''
 
         if not remna_username:
             sub = await remna.create_user(
@@ -145,7 +87,7 @@ async def yookassa_webhook(request: web.Request):
             usernames = []
             one = True
 
-            if user["has_payed_sub"]:
+            if user.has_payed_sub:
                 emoji = '<tg-emoji emoji-id="5258185631355378853">⭐️</tg-emoji>'
 
             if remna_username.startswith("$"):
@@ -173,7 +115,7 @@ async def yookassa_webhook(request: web.Request):
 
             if not one:
                 text = f"Ваши подписки продлены на {month} месяц{suffix[month]}!"
-                emoji = '<tg-emoji emoji-id="5359719332542718652">💎</tg-emoji>'
+                emoji = '<tg-emoji emoji-id="5280962371207077415">💎</tg-emoji>'
                 for_log_text = f'продление {sub_count} подписок'
 
         await send_to_user(

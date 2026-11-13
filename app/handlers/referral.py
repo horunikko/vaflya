@@ -82,9 +82,8 @@ async def ref_stats(callback: CallbackQuery, bot_info):
     await callback.answer(cache_time=1)
     user = await database.users.get_user(callback.from_user.id)
 
-    ref_url = f'https://t.me/{bot_info.username}?start={user["referral_code"]}'
-    ref_count = int(user["referral_count"])
-    bonus_days = ref_bonus_days * ref_count
+    ref_url = f'https://t.me/{bot_info.username}?start={user.referral_code}'
+    bonus_days = ref_bonus_days * user.referral_count
 
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -95,7 +94,7 @@ async def ref_stats(callback: CallbackQuery, bot_info):
 
     await callback.message.edit_caption(
         caption=f'<tg-emoji emoji-id="5260730055880876557">📎</tg-emoji> <b>Ваша ссылка:</b> <code>{ref_url}</code> <i>(нажмите, чтобы скопировать)</i>\n\n'
-        f'<tg-emoji emoji-id="5258513401784573443">👤</tg-emoji> Количество приведённых вами пользователей: {ref_count}\n'
+        f'<tg-emoji emoji-id="5258513401784573443">👤</tg-emoji> Количество приведённых вами пользователей: {user.referral_count}\n'
         f'<tg-emoji emoji-id="5258108352008823107">✨</tg-emoji> Суммарное количество бонусных дней: {bonus_days}\n\n'
         f'<i>За каждого приведённого человека вы получите по <b>{ref_bonus_days} {day_word(ref_bonus_days)}</b> ко всем вашим подпискам!</i>',
         parse_mode='HTML',

@@ -1,15 +1,25 @@
 import aiosqlite
 import base64
+from pydantic import BaseModel
+
+
+def gen_ref_code(tg_id: int | str) -> str:
+    """Генерация уникальных реферальных кодов на основе tg_id через base64""" 
+    return base64.urlsafe_b64encode(str(tg_id).encode()).decode().rstrip("=")
+
+
+class UserModel(BaseModel):
+    telegram_id: int
+    username: str | None
+    referral_from: str | None
+    referral_code: str
+    referral_count: int
+    has_payed_sub: int | None
 
 
 class Users:
     def __init__(self, database):
         self.database = database
-
-
-    def gen_ref_code(self, tg_id: int | str) -> str: 
-        """Генерация уникальных реферальных кодов на основе tg_id через base64""" 
-        return base64.urlsafe_b64encode(str(tg_id).encode()).decode().rstrip("=")
 
     
     async def create(
@@ -45,7 +55,7 @@ class Users:
                 """, (
                 tg_id,
                 username,
-                self.gen_ref_code(tg_id),
+                gen_ref_code(tg_id),
                 referral_from,
                 has_user_sub
             ))
@@ -53,7 +63,7 @@ class Users:
             await db.commit()
 
 
-    async def get_user(self, telegram_id: int) -> dict | None:
+    async def get_user(self, telegram_id: int) -> UserModel | None:
         """Возвращает данные пользователя по telegram_id"""
         async with aiosqlite.connect(self.database.path) as db:
 
@@ -73,10 +83,10 @@ class Users:
 
                 row = await cursor.fetchone()
 
-                return dict(row) if row else None
+                return UserModel(**dict(row)) if row else None
 
 
-    async def activate_sub(self, telegram_id: int):
+    async def activate_sub(self, telegram_id: int) -> None:
         """Делает запись в поле пользователя о получении первой платной подписки"""
         async with aiosqlite.connect(self.database.path) as db:
 
